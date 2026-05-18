@@ -1,0 +1,13 @@
+id = "calc"
+name = "Calc"
+description = "Calc language support for Zed"
+version = "0.0.1"
+schema_version = 1
+authors = []
+
+[language_servers.calc]
+name = "Calc LSP"
+languages = ["Calc"]
+
+[grammars.calc]
+repository = "file://../../tree-sitter-calc"

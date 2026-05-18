@@ -1,6 +1,3 @@
-[package]
-name = "calc"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
+[workspace]
+members = ["crates/calc-core", "crates/calc-lsp", "crates/calc-zed"]
+resolver = "3"

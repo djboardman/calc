@@ -1,0 +1,11 @@
+[package]
+name = "calc-zed"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+calc-lsp = { path = "../calc-lsp", default-features = false }
+zed_extension_api = "0.7.0"
