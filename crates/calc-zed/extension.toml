@@ -10,5 +10,5 @@ name = "Calc LSP"
 languages = ["Calc"]
 
 [grammars.calc]
-repository = "file:///Users/david/src/tries/2026-05-17-calc/calc/tree-sitter-calc"
+repository = "https://github.com/djboardman/tree-sitter-calc"
 rev = "da2692a647023445577b473565a6d363bf142a5e"
