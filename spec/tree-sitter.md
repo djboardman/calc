@@ -9,7 +9,7 @@
 - Does not depend on `calc-core`, `calc-lsp`, or `calc-zed`.
 - Grammar syntax matches the expression language specified in `core.md`.
 ## Package layout
-- The grammar package lives at `tree-sitter-calc`.
+- The grammar package lives in the external `tree-sitter-calc` repository.
 - `tree-sitter-calc` is a Git repository.
 - The grammar definition is `tree-sitter-calc/grammar.js`.
 - The tree-sitter metadata file is `tree-sitter-calc/tree-sitter.json`.

@@ -44,7 +44,7 @@ fn language_server_command(
 ## Development layout
 - Dev extension directory is `crates/calc-zed`
 - Workspace root is two directories above the dev extension directory
-- Local grammar repository path is an absolute `file://` URL to `tree-sitter-calc`
+- Grammar repository location is read from `crates/calc-zed/extension.toml`
 ## Packaged layout
 - Packaged extension contains `extension.toml`
 - Packaged extension contains `languages/calc/config.toml`
@@ -61,8 +61,7 @@ fn language_server_command(
 - Returns a `zed::Command`
 ### Grammar configuration
 - References the `tree-sitter-calc` grammar for `.calc` files
-- During development, uses an absolute `file://` URL to `tree-sitter-calc`
-- `tree-sitter-calc` is a local Git repository
+- Uses the external `tree-sitter-calc` repository URL configured in `crates/calc-zed/extension.toml`
 - Grammar configuration includes `rev` pinned to a commit in `tree-sitter-calc`
 - After changing the grammar repository or `rev`, stale local grammar checkouts under `crates/calc-zed/grammars` may be removed before reinstalling the dev extension
 - Does not implement grammar behavior itself
