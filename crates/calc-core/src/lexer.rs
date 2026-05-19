@@ -24,6 +24,7 @@ impl Lexer<'_, '_> {
                 ' ' | '\t' | '\r' => {
                     self.advance_char();
                 }
+                '#' => break,
                 '0'..='9' | '.' => tokens.push(self.number()?),
                 'a'..='z' | 'A'..='Z' | '_' => tokens.push(self.ident()),
                 '+' => tokens.push(self.single(TokenKind::Plus)),

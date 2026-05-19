@@ -48,6 +48,7 @@ npx tree-sitter-cli parse /dev/stdin <<'EOF'
 price = 10
 tax = price * 0.2
 price + tax
+# Comment
 EOF
 ```
 
@@ -58,6 +59,30 @@ npx tree-sitter-cli init-config
 ```
 
 That warning is local CLI setup only; it is not required for generating the parser or building the project.
+
+Before installing the Zed extension, make sure the grammar revision in `crates/calc-zed/extension.toml` exists on GitHub. From the grammar repository:
+
+```sh
+git status
+git add grammar.js tree-sitter.json src
+git commit -m "Update calc grammar"
+git push
+git rev-parse HEAD
+```
+
+Then update `crates/calc-zed/extension.toml` so `[grammars.calc].rev` matches that pushed commit:
+
+```toml
+[grammars.calc]
+repository = "https://github.com/djboardman/tree-sitter-calc"
+rev = "<output of git rev-parse HEAD>"
+```
+
+You can verify that GitHub has the revision with:
+
+```sh
+git ls-remote https://github.com/djboardman/tree-sitter-calc <revision>
+```
 
 ## Verify
 
@@ -141,17 +166,12 @@ Then use Zed's extension `Rebuild` button for the installed Calc dev extension, 
 
 If Zed still uses an old language server process, restart Zed.
 
-After changing the external Tree-sitter grammar, regenerate the parser, commit the grammar repository, and get the new commit:
+After changing the external Tree-sitter grammar, regenerate the parser and update the pinned grammar revision as described in `Tree-sitter Grammar` above:
 
 ```sh
 cd ../tree-sitter-calc
 npx tree-sitter-cli generate
-git add grammar.js tree-sitter.json src
-git commit -m "Update calc grammar"
-git rev-parse HEAD
 ```
-
-Then update `crates/calc-zed/extension.toml` so `[grammars.calc].rev` matches the new grammar commit.
 
 If Zed has already installed the dev extension, remove any stale local grammar checkout before reinstalling:
 

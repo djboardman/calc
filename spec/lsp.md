@@ -86,6 +86,10 @@
 - Each changed document is evaluated with `evaluate_edited_document`.
 - The server keeps the latest document source and evaluation state.
 - Closed documents are removed from the document store.
+## Comments
+- Comments do not produce diagnostics.
+- Completions ignore comment text.
+- Inlay hints attach to the evaluated statement before a trailing comment.
 ## Boundary
 - `calc-core` owns calculation semantics.
 - `calc-lsp` owns LSP behavior.

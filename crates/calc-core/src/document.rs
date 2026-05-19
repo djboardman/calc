@@ -120,7 +120,7 @@ fn evaluate_line(
     interner: &mut StringInterner,
     env: &mut Environment,
 ) -> LineEntry {
-    if source.trim().is_empty() {
+    if source_before_comment(source).trim().is_empty() {
         return LineEntry {
             evaluation: LineEvaluation {
                 line,
@@ -164,6 +164,10 @@ fn evaluate_line(
             },
         },
     }
+}
+
+fn source_before_comment(source: &str) -> &str {
+    source.split_once('#').map_or(source, |(before, _)| before)
 }
 
 fn apply_line_to_environment(line: &LineEvaluation, env: &mut Environment) {

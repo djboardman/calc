@@ -108,12 +108,20 @@ fn document_evaluation_reports_line_relative_errors() {
 }
 
 #[test]
-fn comments_are_not_supported() {
-    let document = evaluate_new_document("1 # comment");
-    let error = document.lines[0]
-        .result
-        .as_ref()
-        .expect_err("comment marker is invalid");
+fn comments_are_ignored_during_evaluation() {
+    let document = evaluate_new_document("# comment\n1 # comment\nvalue = 2 # comment\nvalue + 3");
 
-    assert_eq!(error.kind, CalcErrorKind::UnexpectedCharacter);
+    assert_eq!(document.lines[0].result, Ok(None));
+    assert_eq!(
+        document.lines[1].result.as_ref().expect("line 1 succeeds"),
+        &Some(Value { number: 1.0 })
+    );
+    assert_eq!(
+        document.lines[2].result.as_ref().expect("line 2 succeeds"),
+        &Some(Value { number: 2.0 })
+    );
+    assert_eq!(
+        document.lines[3].result.as_ref().expect("line 3 succeeds"),
+        &Some(Value { number: 5.0 })
+    );
 }

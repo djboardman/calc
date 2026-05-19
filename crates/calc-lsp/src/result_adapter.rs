@@ -45,7 +45,7 @@ pub(crate) fn inlay_hint(
     Some(InlayHint {
         position: Position {
             line: line.line as u32,
-            character: line_text.len() as u32,
+            character: inlay_position(line_text) as u32,
         },
         label: InlayHintLabel::String(format!("= {}", value.number)),
         kind: Some(InlayHintKind::TYPE),
@@ -55,4 +55,12 @@ pub(crate) fn inlay_hint(
         padding_right: Some(false),
         data: None,
     })
+}
+
+fn inlay_position(line_text: &str) -> usize {
+    line_text
+        .split_once('#')
+        .map_or(line_text, |(before, _)| before)
+        .trim_end()
+        .len()
 }

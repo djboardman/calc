@@ -148,7 +148,11 @@ pub enum CalcErrorKind {
 - Assignment stores the evaluated value for later lines
 - Blank lines are valid and evaluate to no value.
 - Spaces, tabs, and trailing whitespace are ignored.
-- Comments are not supported.
+## Comments
+- `#` starts a comment outside expressions.
+- A comment continues to the end of the line.
+- Comments are ignored during parsing and evaluation.
+- A line containing only whitespace and a comment is a blank line.
 ## Boundary
 - `calc-core` owns calculation semantics.
 - `tree-sitter-calc` owns syntax recognition.

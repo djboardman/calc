@@ -21,7 +21,7 @@
 ## Grammar rules
 ### Source file
 - A source file is zero or more lines.
-- A line is a blank line, expression statement, or assignment statement.
+- A line is a blank line, expression statement, assignment statement, comment, or statement with a trailing comment.
 ### Statements
 - Expression statement: `1 + 2`
 - Assignment statement: `name = expression`
@@ -40,7 +40,9 @@
 - Spaces and tabs are ignored between tokens.
 - Newlines separate statements.
 ### Comments
-- Comments are not supported.
+- Supports line comments starting with `#`.
+- Comments continue to the end of the line.
+- Comments may appear after statements or on otherwise blank lines.
 ## Zed integration
 - `calc-zed` references this grammar for `.calc` files.
 - `calc-zed` does not implement grammar behavior itself.
