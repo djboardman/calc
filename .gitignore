@@ -1,1 +1,4 @@
 /target
+/crates/calc-zed/target/
+/crates/calc-zed/grammars/
+.DS_Store

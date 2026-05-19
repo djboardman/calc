@@ -25,6 +25,6 @@ impl zed::Extension for CalcZed {
             ));
         }
 
-        Ok(language_server_locator::command(worktree))
+        language_server_locator::command(worktree)
     }
 }

@@ -8,9 +8,11 @@ pub(crate) fn completions(
     position: Position,
 ) -> Option<CompletionResponse> {
     let document = &documents.get(uri)?.evaluation;
-    let line = document.lines.get(position.line as usize)?;
-    let items = result_adapter::completion_item(document, line)
-        .into_iter()
+    let items = document
+        .lines
+        .iter()
+        .take(position.line as usize)
+        .filter_map(|line| result_adapter::variable_completion_item(document, line))
         .collect();
 
     Some(CompletionResponse::Array(items))

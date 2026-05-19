@@ -33,7 +33,12 @@
 ### Completion Provider
 - Handles `textDocument/completion`.
 - Uses the latest evaluated document state.
-- Provides calculation results as completion items.
+- Provides previously declared variable names as completion items.
+- Does not parse or evaluate expressions directly.
+### Inlay Hint Provider
+- Handles `textDocument/inlayHint`.
+- Uses the latest evaluated document state.
+- Provides calculation results as inlay hints.
 - Does not parse or evaluate expressions directly.
 ### Diagnostics Provider
 - Publishes diagnostics after document open and document change.
@@ -59,8 +64,19 @@
 - Handles `textDocument/didClose`.
 ### Completion
 - Handles `textDocument/completion`.
-- Completion items show the evaluated calculation result for the current line.
-- Completion items do not modify document text unless explicitly selected by the editor.
+- Completion items suggest variables declared before the current line.
+- Completion items do not include calculated values.
+- Completion items insert the selected variable name.
+### Inlay Hints
+- Advertises inlay hint support.
+- Handles `textDocument/inlayHint`.
+- Provides one inlay hint for each successfully evaluated non-blank line in the requested range.
+- Inlay hints show the evaluated calculation result.
+- Inlay hints do not modify document text.
+- Inlay hints are not returned for lines with errors.
+- Inlay hints are not returned for blank lines.
+- Inlay hints are positioned at the end of the evaluated line.
+- Inlay hint label format is `= value`.
 ### Diagnostics
 - Publishes diagnostics for calculation errors.
 - Diagnostics use line-relative spans from `calc-core` converted to LSP ranges.

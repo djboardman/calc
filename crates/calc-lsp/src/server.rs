@@ -7,13 +7,14 @@ use tower_lsp::{
     lsp_types::{
         CompletionOptions, CompletionParams, CompletionResponse, DidChangeTextDocumentParams,
         DidCloseTextDocumentParams, DidOpenTextDocumentParams, InitializeParams, InitializeResult,
-        ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
+        InlayHint, InlayHintParams, OneOf, ServerCapabilities, TextDocumentSyncCapability,
+        TextDocumentSyncKind,
     },
 };
 
 use crate::{
     completion_provider, configuration::Configuration, diagnostics_provider,
-    document_input_adapter, document_store::DocumentStore,
+    document_input_adapter, document_store::DocumentStore, inlay_hint_provider,
 };
 
 pub(crate) async fn run() {
@@ -49,6 +50,7 @@ impl LanguageServer for CalcLanguageServer {
                     TextDocumentSyncKind::FULL,
                 )),
                 completion_provider: Some(CompletionOptions::default()),
+                inlay_hint_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
             server_info: None,
@@ -104,6 +106,15 @@ impl LanguageServer for CalcLanguageServer {
             &documents,
             &params.text_document_position.text_document.uri,
             params.text_document_position.position,
+        ))
+    }
+
+    async fn inlay_hint(&self, params: InlayHintParams) -> Result<Option<Vec<InlayHint>>> {
+        let documents = self.documents.lock().await;
+        Ok(inlay_hint_provider::inlay_hints(
+            &documents,
+            &params.text_document.uri,
+            &params,
         ))
     }
 }

@@ -32,19 +32,19 @@ fn language_server_command(
 ```
 ## Language server binary
 - The language server executable is named `calc-lsp`
-- During development, `calc-zed` locates `calc-lsp` at the workspace path `target/debug/calc-lsp`
+- `calc-zed` must not assume the opened Zed worktree is the Calc source workspace
 - Packaged releases locate bundled `calc-lsp` binaries under `bin`
 - Language server lookup order:
   - bundled binary under `bin`
-  - workspace binary at `target/debug/calc-lsp`
   - `calc-lsp` on `PATH`
+- If neither location contains `calc-lsp`, return an error explaining that `calc-lsp` must be built and installed or bundled
 ## Language activation
 - Calc support activates for files with the `.calc` extension
 - Calc language recognition is provided by `tree-sitter-calc`
 ## Development layout
 - Dev extension directory is `crates/calc-zed`
 - Workspace root is two directories above the dev extension directory
-- Local grammar path is `file://../../tree-sitter-calc`
+- Local grammar repository path is an absolute `file://` URL to `tree-sitter-calc`
 ## Packaged layout
 - Packaged extension contains `extension.toml`
 - Packaged extension contains `languages/calc/config.toml`
@@ -61,7 +61,10 @@ fn language_server_command(
 - Returns a `zed::Command`
 ### Grammar configuration
 - References the `tree-sitter-calc` grammar for `.calc` files
-- During development, uses `file://../../tree-sitter-calc`
+- During development, uses an absolute `file://` URL to `tree-sitter-calc`
+- `tree-sitter-calc` is a local Git repository
+- Grammar configuration includes `rev` pinned to a commit in `tree-sitter-calc`
+- After changing the grammar repository or `rev`, stale local grammar checkouts under `crates/calc-zed/grammars` may be removed before reinstalling the dev extension
 - Does not implement grammar behavior itself
 ### Configuration
 - Reads Calc-related Zed settings, if settings are added

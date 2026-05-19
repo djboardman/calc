@@ -1,18 +1,23 @@
-use calc_core::{DocumentEvaluation, LineEvaluation, Value};
-use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity};
+use calc_core::{DocumentEvaluation, LineEvaluation};
+use tower_lsp::lsp_types::{
+    CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, InlayHint, InlayHintKind,
+    InlayHintLabel, Position,
+};
 
 use crate::diagnostics_provider;
 
-pub(crate) fn completion_item(
+pub(crate) fn variable_completion_item(
     document: &DocumentEvaluation,
     line: &LineEvaluation,
 ) -> Option<CompletionItem> {
-    let value = line.result.as_ref().ok().and_then(Option::as_ref)?;
+    line.result.as_ref().ok()?;
+    let symbol = line.defines?;
+    let variable = document.symbol_text(symbol);
 
     Some(CompletionItem {
-        label: completion_label(document, line, value),
-        kind: Some(CompletionItemKind::VALUE),
-        insert_text: None,
+        label: variable.to_string(),
+        kind: Some(CompletionItemKind::VARIABLE),
+        insert_text: Some(variable.to_string()),
         ..CompletionItem::default()
     })
 }
@@ -29,9 +34,25 @@ pub(crate) fn diagnostic(line: &LineEvaluation) -> Option<Diagnostic> {
     })
 }
 
-fn completion_label(document: &DocumentEvaluation, line: &LineEvaluation, value: &Value) -> String {
-    match line.defines {
-        Some(symbol) => format!("{} = {}", document.symbol_text(symbol), value.number),
-        None => value.number.to_string(),
-    }
+pub(crate) fn inlay_hint(
+    source: &str,
+    _document: &DocumentEvaluation,
+    line: &LineEvaluation,
+) -> Option<InlayHint> {
+    let value = line.result.as_ref().ok().and_then(Option::as_ref)?;
+    let line_text = source.split('\n').nth(line.line)?;
+
+    Some(InlayHint {
+        position: Position {
+            line: line.line as u32,
+            character: line_text.len() as u32,
+        },
+        label: InlayHintLabel::String(format!("= {}", value.number)),
+        kind: Some(InlayHintKind::TYPE),
+        text_edits: None,
+        tooltip: None,
+        padding_left: Some(true),
+        padding_right: Some(false),
+        data: None,
+    })
 }

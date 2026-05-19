@@ -50,6 +50,14 @@ price + tax
 EOF
 ```
 
+If the smoke test warns that no parser directories are configured, initialize the local Tree-sitter CLI config:
+
+```sh
+npx tree-sitter-cli init-config
+```
+
+That warning is local CLI setup only; it is not required for generating the parser or building the project.
+
 ## Verify
 
 From the repository root:
@@ -62,10 +70,10 @@ cargo clippy --all-targets -- -D warnings
 
 ## Install In Zed For Local Development
 
-Build the language server and extension:
+Build and install the language server, then build the extension:
 
 ```sh
-cargo build -p calc-lsp
+cargo install --path crates/calc-lsp
 cargo build -p calc-zed --target wasm32-wasip1
 ```
 
@@ -79,16 +87,15 @@ Then in Zed:
 /Users/david/src/tries/2026-05-17-calc/calc/crates/calc-zed
 ```
 
-Open a `.calc` file from the workspace root. During local development, `calc-zed` looks for the language server in this order:
+Open a `.calc` file from any workspace. During local development, `calc-zed` looks for the language server in this order:
 
 1. `crates/calc-zed/bin/calc-lsp`
-2. `target/debug/calc-lsp`
-3. `calc-lsp` on `PATH`
+2. `calc-lsp` on `PATH`
 
-For normal local development, `cargo build -p calc-lsp` creates:
+For normal local development, `cargo install --path crates/calc-lsp` installs:
 
 ```text
-target/debug/calc-lsp
+~/.cargo/bin/calc-lsp
 ```
 
 ## Example
@@ -102,3 +109,38 @@ price + tax
 ```
 
 Zed should recognize it as Calc, start `calc-lsp`, show diagnostics for invalid calculations, and provide completion results for the current line.
+
+## Updating An Installed Dev Extension
+
+After changing Rust code, rebuild the affected pieces:
+
+```sh
+cargo install --path crates/calc-lsp
+cargo build -p calc-zed --target wasm32-wasip1
+```
+
+After changing the Tree-sitter grammar, regenerate the parser and commit the grammar repo:
+
+```sh
+cd tree-sitter-calc
+npx tree-sitter-cli generate
+git add grammar.js tree-sitter.json src
+git commit -m "Update calc grammar"
+git rev-parse HEAD
+```
+
+Then update `crates/calc-zed/extension.toml` so `[grammars.calc].rev` matches the new grammar commit.
+
+If Zed has already installed the dev extension, remove any stale local grammar checkout before reinstalling:
+
+```sh
+rm -rf crates/calc-zed/grammars
+```
+
+In Zed, install the dev extension again from:
+
+```text
+/Users/david/src/tries/2026-05-17-calc/calc/crates/calc-zed
+```
+
+If Zed still uses an old language server process, restart Zed.
