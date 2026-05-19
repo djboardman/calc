@@ -7,7 +7,7 @@ The project is split into:
 - `calc-core`: calculator parsing, evaluation, and incremental document evaluation.
 - `calc-lsp`: Language Server Protocol support for editor integrations.
 - `calc-zed`: Zed extension wrapper that starts `calc-lsp`.
-- `tree-sitter-calc`: Tree-sitter grammar for `.calc` files.
+- `tree-sitter-calc`: external Tree-sitter grammar for `.calc` files, referenced by `calc-zed`.
 
 ## Prerequisites
 
@@ -31,18 +31,19 @@ cargo build -p calc-lsp
 cargo build -p calc-zed --target wasm32-wasip1
 ```
 
-## Generate Tree-sitter Parser
+## Tree-sitter Grammar
 
-The generated parser files live in `tree-sitter-calc/src`.
+The Tree-sitter grammar is fetched by Zed from the repository and revision pinned in:
 
-```sh
-cd tree-sitter-calc
-npx tree-sitter-cli generate
+```text
+crates/calc-zed/extension.toml
 ```
 
-You can smoke-test the grammar with:
+The grammar is not built by the main Calc workspace. If you are developing the grammar repository separately, generate and smoke-test it from that repository:
 
 ```sh
+cd ../tree-sitter-calc
+npx tree-sitter-cli generate
 npx tree-sitter-cli parse /dev/stdin <<'EOF'
 price = 10
 tax = price * 0.2
@@ -68,13 +69,24 @@ cargo test
 cargo clippy --all-targets -- -D warnings
 ```
 
-## Install In Zed For Local Development
+## Install In Zed For Local Testing
 
-Build and install the language server, then build the extension:
+From the Calc repository root, install the language server on `PATH` and build the Zed extension:
 
 ```sh
 cargo install --path crates/calc-lsp
 cargo build -p calc-zed --target wasm32-wasip1
+```
+
+`calc-zed` starts `calc-lsp` by looking in this order:
+
+1. `crates/calc-zed/bin/calc-lsp`
+2. `calc-lsp` on `PATH`
+
+For local testing, `cargo install --path crates/calc-lsp` installs:
+
+```text
+~/.cargo/bin/calc-lsp
 ```
 
 Then in Zed:
@@ -87,15 +99,17 @@ Then in Zed:
 /Users/david/src/tries/2026-05-17-calc/calc/crates/calc-zed
 ```
 
-Open a `.calc` file from any workspace. During local development, `calc-zed` looks for the language server in this order:
+Open a `.calc` file from any workspace. Zed should recognize it as Calc, start `calc-lsp`, show diagnostics for invalid calculations, provide completions, and show inlay hints when Zed inlay hints are enabled.
 
-1. `crates/calc-zed/bin/calc-lsp`
-2. `calc-lsp` on `PATH`
+For Calc totals, enable Zed's other inlay hints:
 
-For normal local development, `cargo install --path crates/calc-lsp` installs:
-
-```text
-~/.cargo/bin/calc-lsp
+```json
+{
+  "inlay_hints": {
+    "enabled": true,
+    "show_other_hints": true
+  }
+}
 ```
 
 ## Example
@@ -108,21 +122,29 @@ tax = price * 0.2
 price + tax
 ```
 
-Zed should recognize it as Calc, start `calc-lsp`, show diagnostics for invalid calculations, and provide completion results for the current line.
+Zed should show diagnostics, completions for previously declared variables, and inlay totals when inlay hints are enabled.
 
 ## Updating An Installed Dev Extension
 
-After changing Rust code, rebuild the affected pieces:
+After changing `calc-core`, `calc-lsp`, or `calc-zed`, rebuild the affected local pieces:
 
 ```sh
 cargo install --path crates/calc-lsp
 cargo build -p calc-zed --target wasm32-wasip1
 ```
 
-After changing the Tree-sitter grammar, regenerate the parser and commit the grammar repo:
+Then use Zed's extension `Rebuild` button for the installed Calc dev extension, or reinstall the dev extension from:
+
+```text
+/Users/david/src/tries/2026-05-17-calc/calc/crates/calc-zed
+```
+
+If Zed still uses an old language server process, restart Zed.
+
+After changing the external Tree-sitter grammar, regenerate the parser, commit the grammar repository, and get the new commit:
 
 ```sh
-cd tree-sitter-calc
+cd ../tree-sitter-calc
 npx tree-sitter-cli generate
 git add grammar.js tree-sitter.json src
 git commit -m "Update calc grammar"
@@ -137,10 +159,4 @@ If Zed has already installed the dev extension, remove any stale local grammar c
 rm -rf crates/calc-zed/grammars
 ```
 
-In Zed, install the dev extension again from:
-
-```text
-/Users/david/src/tries/2026-05-17-calc/calc/crates/calc-zed
-```
-
-If Zed still uses an old language server process, restart Zed.
+Then rebuild or reinstall the dev extension in Zed.

@@ -1,4 +1,5 @@
 /target
 /crates/calc-zed/target/
 /crates/calc-zed/grammars/
+/crates/calc-zed/extension.wasm
 .DS_Store
