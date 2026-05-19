@@ -153,6 +153,10 @@ pub enum CalcErrorKind {
 - A comment continues to the end of the line.
 - Comments are ignored during parsing and evaluation.
 - A line containing only whitespace and a comment is a blank line.
+## Result comments
+- A result comment is a trailing comment whose first non-whitespace text is `=>`.
+- Result comments are ignored during parsing and evaluation like other comments.
+- Result comments do not define values and do not affect dependencies.
 ## Boundary
 - `calc-core` owns calculation semantics.
 - `tree-sitter-calc` owns syntax recognition.

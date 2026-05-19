@@ -35,11 +35,6 @@
 - Uses the latest evaluated document state.
 - Provides previously declared variable names as completion items.
 - Does not parse or evaluate expressions directly.
-### Inlay Hint Provider
-- Handles `textDocument/inlayHint`.
-- Uses the latest evaluated document state.
-- Provides calculation results as inlay hints.
-- Does not parse or evaluate expressions directly.
 ### Diagnostics Provider
 - Publishes diagnostics after document open and document change.
 - Converts `calc-core::CalcError` values into LSP diagnostics.
@@ -67,16 +62,6 @@
 - Completion items suggest variables declared before the current line.
 - Completion items do not include calculated values.
 - Completion items insert the selected variable name.
-### Inlay Hints
-- Advertises inlay hint support.
-- Handles `textDocument/inlayHint`.
-- Provides one inlay hint for each successfully evaluated non-blank line in the requested range.
-- Inlay hints show the evaluated calculation result.
-- Inlay hints do not modify document text.
-- Inlay hints are not returned for lines with errors.
-- Inlay hints are not returned for blank lines.
-- Inlay hints are positioned at the end of the evaluated line.
-- Inlay hint label format is `= value`.
 ### Diagnostics
 - Publishes diagnostics for calculation errors.
 - Diagnostics use line-relative spans from `calc-core` converted to LSP ranges.
@@ -86,10 +71,20 @@
 - Each changed document is evaluated with `evaluate_edited_document`.
 - The server keeps the latest document source and evaluation state.
 - Closed documents are removed from the document store.
+### Inlay Hints
+- Does not advertise inlay hint support for calculation results.
+- Calculation results are written with result comments.
 ## Comments
 - Comments do not produce diagnostics.
 - Completions ignore comment text.
-- Inlay hints attach to the evaluated statement before a trailing comment.
+## Result comments
+- The language server provides a formatting command or code action to write evaluated results into the document as result comments.
+- Result comments use the format `# => value`.
+- Writing result comments replaces an existing trailing result comment on the same line.
+- Writing result comments does not replace ordinary trailing comments.
+- Result comments are written only for successfully evaluated non-blank lines.
+- Lines with errors or no value do not receive result comments.
+- Inlay hints are not used for calculation results when result comment writing is enabled.
 ## Boundary
 - `calc-core` owns calculation semantics.
 - `calc-lsp` owns LSP behavior.

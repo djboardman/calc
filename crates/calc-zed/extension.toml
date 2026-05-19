@@ -11,4 +11,4 @@ languages = ["Calc"]
 
 [grammars.calc]
 repository = "https://github.com/djboardman/tree-sitter-calc"
-rev = "21fda1540993e2e5c186a90d146454160f374856"
+rev = "c1fbc8eaa6da9d508337a39e71ca8e537af81a6f"

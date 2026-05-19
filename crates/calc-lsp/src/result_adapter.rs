@@ -1,8 +1,5 @@
 use calc_core::{DocumentEvaluation, LineEvaluation};
-use tower_lsp::lsp_types::{
-    CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, InlayHint, InlayHintKind,
-    InlayHintLabel, Position,
-};
+use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity};
 
 use crate::diagnostics_provider;
 
@@ -32,35 +29,4 @@ pub(crate) fn diagnostic(line: &LineEvaluation) -> Option<Diagnostic> {
         message: format!("{:?}", error.kind),
         ..Diagnostic::default()
     })
-}
-
-pub(crate) fn inlay_hint(
-    source: &str,
-    _document: &DocumentEvaluation,
-    line: &LineEvaluation,
-) -> Option<InlayHint> {
-    let value = line.result.as_ref().ok().and_then(Option::as_ref)?;
-    let line_text = source.split('\n').nth(line.line)?;
-
-    Some(InlayHint {
-        position: Position {
-            line: line.line as u32,
-            character: inlay_position(line_text) as u32,
-        },
-        label: InlayHintLabel::String(format!("= {}", value.number)),
-        kind: Some(InlayHintKind::TYPE),
-        text_edits: None,
-        tooltip: None,
-        padding_left: Some(true),
-        padding_right: Some(false),
-        data: None,
-    })
-}
-
-fn inlay_position(line_text: &str) -> usize {
-    line_text
-        .split_once('#')
-        .map_or(line_text, |(before, _)| before)
-        .trim_end()
-        .len()
 }

@@ -70,6 +70,13 @@ fn language_server_command(
 - Provides defaults when settings are absent
 - Does not affect calculation semantics owned by `calc-core`
 - Does not affect LSP semantics owned by `calc-lsp`
+### Highlighting
+- `number` nodes are captured as `@number`.
+- `identifier` nodes are captured as `@variable`.
+- Operator tokens `+`, `-`, `*`, `/`, and `=` are captured as `@operator`.
+- `comment` nodes are captured as `@comment`.
+- `result_comment` nodes are captured as `@hint`.
+- Exact colors are controlled by the active Zed theme.
 ## Boundary
 - `calc-core` owns calculation semantics
 - `calc-lsp` owns LSP behavior

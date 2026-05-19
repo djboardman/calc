@@ -43,6 +43,14 @@
 - Supports line comments starting with `#`.
 - Comments continue to the end of the line.
 - Comments may appear after statements or on otherwise blank lines.
+- Comments are distinct syntax nodes.
+- Comment node name is `comment`
+### Result comments
+- Result comments are syntax comments.
+- A result comment starts with `#` followed by optional whitespace and `=>`.
+- Result comments may be highlighted distinctly from ordinary comments if supported.
+- Result comments are distinct syntax nodes.
+- Result node name is `result_comment`
 ## Zed integration
 - `calc-zed` references this grammar for `.calc` files.
 - `calc-zed` does not implement grammar behavior itself.
