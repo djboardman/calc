@@ -39,6 +39,16 @@
 ### Whitespace
 - Spaces and tabs are ignored between tokens.
 - Newlines separate statements.
+- Indents signal sections
+### Sections
+- Supports section headers using `name:`.
+- Supports indentation-based section nesting.
+- Supports dotted variable references.
+- Section headers are distinct syntax nodes named `section_header`.
+- Dotted variable references are distinct syntax nodes named `qualified_identifier`.
+- Section headers contain a single unqualified identifier followed by `:`.
+- Dotted section headers are not supported.
+- Section headers may have trailing comments.
 ### Comments
 - Supports line comments starting with `#`.
 - Comments continue to the end of the line.
@@ -47,7 +57,7 @@
 - Comment node name is `comment`
 ### Result comments
 - Result comments are syntax comments.
-- A result comment starts with `#` followed by optional whitespace and `=>`.
+- A result comment starts with `#` followed by optional whitespace and `=`.
 - Result comments may be highlighted distinctly from ordinary comments if supported.
 - Result comments are distinct syntax nodes.
 - Result node name is `result_comment`

@@ -50,9 +50,13 @@ fn blank_lines_are_included_and_evaluate_to_no_value() {
 #[test]
 fn defines_returns_assigned_symbol_text() {
     let document = evaluate_new_document("total = 12");
-    let symbol = document.lines[0].defines.expect("line defines total");
+    let name = document.lines[0]
+        .defines
+        .as_ref()
+        .expect("line defines total");
 
-    assert_eq!(document.symbol_text(symbol), "total");
+    assert_eq!(name.parts.len(), 1);
+    assert_eq!(document.symbol_text(name.parts[0]), "total");
 }
 
 #[test]
@@ -124,4 +128,59 @@ fn comments_are_ignored_during_evaluation() {
         document.lines[3].result.as_ref().expect("line 3 succeeds"),
         &Some(Value { number: 5.0 })
     );
+}
+
+#[test]
+fn sections_define_and_resolve_qualified_variables() {
+    let document = evaluate_new_document(
+        "house:\n  stairs:\n    total = 10\n    deposit = total * 0.5\n\ntotal:\n  deposit = house.stairs.deposit",
+    );
+
+    assert_eq!(document.lines[0].result, Ok(None));
+    assert_eq!(document.lines[1].result, Ok(None));
+    assert_eq!(
+        document.lines[2].result.as_ref().expect("line 2 succeeds"),
+        &Some(Value { number: 10.0 })
+    );
+    assert_eq!(
+        document.lines[3].result.as_ref().expect("line 3 succeeds"),
+        &Some(Value { number: 5.0 })
+    );
+    assert_eq!(
+        document.lines[6].result.as_ref().expect("line 6 succeeds"),
+        &Some(Value { number: 5.0 })
+    );
+
+    let name = document.lines[3]
+        .defines
+        .as_ref()
+        .expect("line defines deposit");
+    let parts = name
+        .parts
+        .iter()
+        .map(|symbol| document.symbol_text(*symbol))
+        .collect::<Vec<_>>();
+    assert_eq!(parts, ["house", "stairs", "deposit"]);
+}
+
+#[test]
+fn leading_tabs_are_invalid_indentation() {
+    let document = evaluate_new_document("\tvalue = 1");
+    let error = document.lines[0]
+        .result
+        .as_ref()
+        .expect_err("tab indentation is invalid");
+
+    assert_eq!(error.kind, CalcErrorKind::InvalidIndentation);
+}
+
+#[test]
+fn dotted_section_headers_are_invalid() {
+    let document = evaluate_new_document("house.stairs:");
+    let error = document.lines[0]
+        .result
+        .as_ref()
+        .expect_err("dotted section header is invalid");
+
+    assert_eq!(error.kind, CalcErrorKind::InvalidSectionHeader);
 }

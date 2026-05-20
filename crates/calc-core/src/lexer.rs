@@ -25,13 +25,16 @@ impl Lexer<'_, '_> {
                     self.advance_char();
                 }
                 '#' => break,
-                '0'..='9' | '.' => tokens.push(self.number()?),
+                '0'..='9' => tokens.push(self.number()?),
+                '.' if self.next_char_is_digit() => tokens.push(self.number()?),
+                '.' => tokens.push(self.single(TokenKind::Dot)),
                 'a'..='z' | 'A'..='Z' | '_' => tokens.push(self.ident()),
                 '+' => tokens.push(self.single(TokenKind::Plus)),
                 '-' => tokens.push(self.single(TokenKind::Minus)),
                 '*' => tokens.push(self.single(TokenKind::Star)),
                 '/' => tokens.push(self.single(TokenKind::Slash)),
                 '=' => tokens.push(self.single(TokenKind::Equal)),
+                ':' => tokens.push(self.single(TokenKind::Colon)),
                 '(' => tokens.push(self.single(TokenKind::LeftParen)),
                 ')' => tokens.push(self.single(TokenKind::RightParen)),
                 _ => {
@@ -115,5 +118,11 @@ impl Lexer<'_, '_> {
         if let Some((_, ch)) = self.current_char() {
             self.index += ch.len_utf8();
         }
+    }
+
+    fn next_char_is_digit(&self) -> bool {
+        let mut chars = self.source[self.index..].chars();
+        chars.next();
+        matches!(chars.next(), Some('0'..='9'))
     }
 }

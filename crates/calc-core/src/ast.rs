@@ -1,4 +1,4 @@
-use crate::{Span, Symbol};
+use crate::{InternalQualifiedName, Span, Symbol};
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum UnaryOp {
@@ -20,7 +20,7 @@ pub enum Expr {
         span: Span,
     },
     Variable {
-        name: Symbol,
+        name: InternalQualifiedName,
         span: Span,
     },
     Unary {
@@ -43,5 +43,9 @@ pub enum Statement {
         name: Symbol,
         name_span: Span,
         value: Expr,
+    },
+    SectionHeader {
+        name: Symbol,
+        name_span: Span,
     },
 }

@@ -1,22 +1,14 @@
-use calc_core::{DocumentEvaluation, LineEvaluation};
-use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity};
+use calc_core::{DocumentEvaluation, LineEvaluation, QualifiedName};
+use tower_lsp::lsp_types::{Diagnostic, DiagnosticSeverity};
 
 use crate::diagnostics_provider;
 
-pub(crate) fn variable_completion_item(
-    document: &DocumentEvaluation,
-    line: &LineEvaluation,
-) -> Option<CompletionItem> {
-    line.result.as_ref().ok()?;
-    let symbol = line.defines?;
-    let variable = document.symbol_text(symbol);
-
-    Some(CompletionItem {
-        label: variable.to_string(),
-        kind: Some(CompletionItemKind::VARIABLE),
-        insert_text: Some(variable.to_string()),
-        ..CompletionItem::default()
-    })
+pub(crate) fn qualified_name_text(document: &DocumentEvaluation, name: &QualifiedName) -> String {
+    name.parts
+        .iter()
+        .map(|symbol| document.symbol_text(*symbol))
+        .collect::<Vec<_>>()
+        .join(".")
 }
 
 pub(crate) fn diagnostic(line: &LineEvaluation) -> Option<Diagnostic> {

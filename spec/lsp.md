@@ -65,6 +65,7 @@
 ### Diagnostics
 - Publishes diagnostics for calculation errors.
 - Diagnostics use line-relative spans from `calc-core` converted to LSP ranges.
+- Diagnostics include stale result comment warnings.
 - Diagnostics are cleared on `textDocument/didClose`.
 ## Document Behavior
 - Each opened document is evaluated with `evaluate_new_document`.
@@ -78,13 +79,24 @@
 - Comments do not produce diagnostics.
 - Completions ignore comment text.
 ## Result comments
-- The language server provides a formatting command or code action to write evaluated results into the document as result comments.
-- Result comments use the format `# => value`.
-- Writing result comments replaces an existing trailing result comment on the same line.
+- The language server advertises document formatting support.
+- Formatting a Calc document writes evaluated results into the document as result comments.
+- Result comments use the format `# = value`.
+- Assignment lines whose value is a numeric literal do not receive result comments.
+- Writing result comments replaces an existing trailing result comment on the same line, including literals with a unary operator.
 - Writing result comments does not replace ordinary trailing comments.
 - Result comments are written only for successfully evaluated non-blank lines.
 - Lines with errors or no value do not receive result comments.
 - Inlay hints are not used for calculation results when result comment writing is enabled.
+- If a result comment exists but does not match the current evaluated result, publish a warning diagnostic on the result comment.
+- Missing result comments do not produce diagnostics.
+## Sections
+- Section headers do not receive result comments.
+- Section headers do not produce diagnostics unless malformed.
+- Completion includes variables visible from the current section.
+- Completion supports qualified variable references.
+- Completion for visible variables inserts the shortest valid name from the current section.
+- Completion for qualified references inserts the full qualified name.
 ## Boundary
 - `calc-core` owns calculation semantics.
 - `calc-lsp` owns LSP behavior.

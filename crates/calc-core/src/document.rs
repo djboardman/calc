@@ -1,15 +1,15 @@
 use std::collections::HashSet;
 
 use crate::{
-    CalcError, Environment, Expr, Statement, StringInterner, Symbol, Value, evaluate_statement,
-    parse,
+    CalcError, CalcErrorKind, Environment, InternalQualifiedName, Span, Statement, StringInterner,
+    Symbol, Value, evaluate_statement, parse, qualified_name, resolve_expr_dependencies,
 };
 
 #[derive(Debug)]
 pub struct DocumentEvaluation {
     pub lines: Vec<LineEvaluation>,
     interner: StringInterner,
-    states: Vec<LineState>,
+    _states: Vec<LineState>,
 }
 
 impl DocumentEvaluation {
@@ -22,13 +22,13 @@ impl DocumentEvaluation {
 pub struct LineEvaluation {
     pub line: usize,
     pub result: Result<Option<Value>, CalcError>,
-    pub defines: Option<Symbol>,
+    pub defines: Option<InternalQualifiedName>,
 }
 
 #[derive(Debug)]
 struct LineState {
-    source: String,
-    depends_on: HashSet<Symbol>,
+    _source: String,
+    _depends_on: HashSet<InternalQualifiedName>,
 }
 
 struct LineEntry {
@@ -36,82 +36,36 @@ struct LineEntry {
     state: LineState,
 }
 
+#[derive(Debug)]
+struct SectionEntry {
+    indent: usize,
+    name: Symbol,
+}
+
 pub fn evaluate_new_document(source: &str) -> DocumentEvaluation {
-    let mut document = DocumentEvaluation {
-        lines: Vec::new(),
-        interner: StringInterner::new(),
-        states: Vec::new(),
-    };
-    let mut env = Environment::new();
-
-    for (line, text) in source.split('\n').enumerate() {
-        let entry = evaluate_line(line, text, &mut document.interner, &mut env);
-        apply_line_to_environment(&entry.evaluation, &mut env);
-        document.lines.push(entry.evaluation);
-        document.states.push(entry.state);
-    }
-
-    document
+    evaluate_document(source, StringInterner::new())
 }
 
 pub fn evaluate_edited_document(previous: DocumentEvaluation, source: &str) -> DocumentEvaluation {
-    let new_lines: Vec<&str> = source.split('\n').collect();
-    let Some(change) = changed_line_range(&previous.states, &new_lines) else {
-        return previous;
-    };
+    evaluate_document(source, previous.interner)
+}
 
-    let DocumentEvaluation {
-        lines,
-        interner,
-        states,
-    } = previous;
-    let mut old_entries = lines
-        .into_iter()
-        .zip(states)
-        .map(|(evaluation, state)| Some(LineEntry { evaluation, state }))
-        .collect::<Vec<_>>();
+fn evaluate_document(source: &str, interner: StringInterner) -> DocumentEvaluation {
     let mut document = DocumentEvaluation {
         lines: Vec::new(),
         interner,
-        states: Vec::new(),
+        _states: Vec::new(),
     };
     let mut env = Environment::new();
-    let mut changed_variables = changed_variables(&old_entries, &change);
+    let mut sections = Vec::new();
 
-    for (line, text) in new_lines.iter().enumerate() {
-        let in_changed_range = line >= change.start && line < change.new_end;
-        let old_index = old_line_index(line, &change);
-        let old_entry =
-            old_index.and_then(|index| old_entries.get_mut(index).and_then(Option::take));
-        let depends_on_changed = old_entry
-            .as_ref()
-            .is_some_and(|entry| depends_on_any(&entry.state, &changed_variables));
-
-        let entry = if in_changed_range || depends_on_changed {
-            let entry = evaluate_line(line, text, &mut document.interner, &mut env);
-            if let Some(symbol) = entry.evaluation.defines {
-                changed_variables.insert(symbol);
-            }
-            entry
-        } else if let Some(old_entry) = old_entry {
-            reuse_line(old_entry, line)
-        } else {
-            evaluate_line(line, text, &mut document.interner, &mut env)
-        };
-
-        apply_line_to_environment(&entry.evaluation, &mut env);
+    for (line, text) in source.split('\n').enumerate() {
+        let entry = evaluate_line(line, text, &mut document.interner, &mut env, &mut sections);
+        document._states.push(entry.state);
         document.lines.push(entry.evaluation);
-        document.states.push(entry.state);
     }
 
     document
-}
-
-#[derive(Debug)]
-struct ChangeRange {
-    start: usize,
-    old_end: usize,
-    new_end: usize,
 }
 
 fn evaluate_line(
@@ -119,49 +73,52 @@ fn evaluate_line(
     source: &str,
     interner: &mut StringInterner,
     env: &mut Environment,
+    sections: &mut Vec<SectionEntry>,
 ) -> LineEntry {
-    if source_before_comment(source).trim().is_empty() {
-        return LineEntry {
-            evaluation: LineEvaluation {
-                line,
-                result: Ok(None),
-                defines: None,
-            },
-            state: LineState {
-                source: source.to_string(),
-                depends_on: HashSet::new(),
-            },
-        };
+    let source_without_comment = source_before_comment(source);
+    if source_without_comment.trim().is_empty() {
+        return line_entry(line, source, Ok(None), None, HashSet::new());
     }
 
-    match parse(source, interner) {
-        Ok(statement) => {
-            let defines = statement_definition(&statement);
-            let depends_on = statement_dependencies(&statement);
-            let result = evaluate_statement(&statement, env).map(Some);
+    let indent = match leading_indent(source) {
+        Ok(indent) => indent,
+        Err(error) => return line_entry(line, source, Err(error), None, HashSet::new()),
+    };
+    dedent(sections, indent);
+    let scope = section_scope(sections);
 
-            LineEntry {
-                evaluation: LineEvaluation {
-                    line,
-                    result,
-                    defines,
-                },
-                state: LineState {
-                    source: source.to_string(),
-                    depends_on,
-                },
-            }
+    match parse(source, interner) {
+        Ok(Statement::SectionHeader { name, .. }) => {
+            sections.push(SectionEntry { indent, name });
+            line_entry(line, source, Ok(None), None, HashSet::new())
         }
-        Err(error) => LineEntry {
-            evaluation: LineEvaluation {
-                line,
-                result: Err(error),
-                defines: None,
-            },
-            state: LineState {
-                source: source.to_string(),
-                depends_on: HashSet::new(),
-            },
+        Ok(statement) => {
+            let defines = statement_definition(&statement, &scope);
+            let depends_on = statement_dependencies(&statement, env, &scope);
+            let result = evaluate_statement(&statement, env, &scope).map(Some);
+
+            line_entry(line, source, result, defines, depends_on)
+        }
+        Err(error) => line_entry(line, source, Err(error), None, HashSet::new()),
+    }
+}
+
+fn line_entry(
+    line: usize,
+    source: &str,
+    result: Result<Option<Value>, CalcError>,
+    defines: Option<InternalQualifiedName>,
+    depends_on: HashSet<InternalQualifiedName>,
+) -> LineEntry {
+    LineEntry {
+        evaluation: LineEvaluation {
+            line,
+            result,
+            defines,
+        },
+        state: LineState {
+            _source: source.to_string(),
+            _depends_on: depends_on,
         },
     }
 }
@@ -170,106 +127,59 @@ fn source_before_comment(source: &str) -> &str {
     source.split_once('#').map_or(source, |(before, _)| before)
 }
 
-fn apply_line_to_environment(line: &LineEvaluation, env: &mut Environment) {
-    if let (Some(symbol), Ok(Some(value))) = (line.defines, &line.result) {
-        env.set(symbol, Value::number(value.number));
-    }
-}
+fn leading_indent(source: &str) -> Result<usize, CalcError> {
+    let mut indent = 0;
 
-fn changed_line_range(old_states: &[LineState], new_lines: &[&str]) -> Option<ChangeRange> {
-    let shared_len = old_states.len().min(new_lines.len());
-    let mut first = 0;
-
-    while first < shared_len && old_states[first].source == new_lines[first] {
-        first += 1;
-    }
-
-    if first == old_states.len() && first == new_lines.len() {
-        return None;
-    }
-
-    let mut old_end = old_states.len();
-    let mut new_end = new_lines.len();
-
-    while old_end > first
-        && new_end > first
-        && old_states[old_end - 1].source == new_lines[new_end - 1]
-    {
-        old_end -= 1;
-        new_end -= 1;
-    }
-
-    Some(ChangeRange {
-        start: first,
-        old_end,
-        new_end,
-    })
-}
-
-fn old_line_index(new_line: usize, change: &ChangeRange) -> Option<usize> {
-    if new_line < change.start {
-        Some(new_line)
-    } else if new_line >= change.new_end {
-        Some(new_line + change.old_end - change.new_end)
-    } else {
-        None
-    }
-}
-
-fn reuse_line(mut entry: LineEntry, new_line_number: usize) -> LineEntry {
-    entry.evaluation.line = new_line_number;
-    entry
-}
-
-fn changed_variables(old_entries: &[Option<LineEntry>], change: &ChangeRange) -> HashSet<Symbol> {
-    let mut symbols = HashSet::new();
-
-    for line in change.start..change.old_end {
-        if let Some(Some(entry)) = old_entries.get(line)
-            && let Some(symbol) = entry.evaluation.defines
-        {
-            symbols.insert(symbol);
+    for (index, ch) in source.char_indices() {
+        match ch {
+            ' ' => indent += 1,
+            '\t' => {
+                return Err(CalcError::new(
+                    CalcErrorKind::InvalidIndentation,
+                    Span::new(index, index + ch.len_utf8()),
+                ));
+            }
+            _ => return Ok(indent),
         }
     }
 
-    symbols
+    Ok(indent)
 }
 
-fn depends_on_any(state: &LineState, symbols: &HashSet<Symbol>) -> bool {
-    state
-        .depends_on
-        .iter()
-        .any(|symbol| symbols.contains(symbol))
-}
-
-fn statement_definition(statement: &Statement) -> Option<Symbol> {
-    match statement {
-        Statement::Expr(_) => None,
-        Statement::Assignment { name, .. } => Some(*name),
+fn dedent(sections: &mut Vec<SectionEntry>, indent: usize) {
+    while sections
+        .last()
+        .is_some_and(|section| indent <= section.indent)
+    {
+        sections.pop();
     }
 }
 
-fn statement_dependencies(statement: &Statement) -> HashSet<Symbol> {
+fn section_scope(sections: &[SectionEntry]) -> Vec<Symbol> {
+    sections.iter().map(|section| section.name).collect()
+}
+
+fn statement_definition(statement: &Statement, scope: &[Symbol]) -> Option<InternalQualifiedName> {
+    match statement {
+        Statement::Expr(_) | Statement::SectionHeader { .. } => None,
+        Statement::Assignment { name, .. } => Some(qualified_name(scope, *name)),
+    }
+}
+
+fn statement_dependencies(
+    statement: &Statement,
+    env: &Environment,
+    scope: &[Symbol],
+) -> HashSet<InternalQualifiedName> {
     let mut dependencies = HashSet::new();
 
     match statement {
-        Statement::Expr(expr) => expr_dependencies(expr, &mut dependencies),
-        Statement::Assignment { value, .. } => expr_dependencies(value, &mut dependencies),
+        Statement::Expr(expr) => resolve_expr_dependencies(expr, env, scope, &mut dependencies),
+        Statement::Assignment { value, .. } => {
+            resolve_expr_dependencies(value, env, scope, &mut dependencies);
+        }
+        Statement::SectionHeader { .. } => {}
     }
 
     dependencies
-}
-
-fn expr_dependencies(expr: &Expr, dependencies: &mut HashSet<Symbol>) {
-    match expr {
-        Expr::Number { .. } => {}
-        Expr::Variable { name, .. } => {
-            dependencies.insert(*name);
-        }
-        Expr::Unary { expr, .. } => expr_dependencies(expr, dependencies),
-        Expr::Binary { left, right, .. } => {
-            expr_dependencies(left, dependencies);
-            expr_dependencies(right, dependencies);
-        }
-    }
 }

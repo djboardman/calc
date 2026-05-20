@@ -76,6 +76,7 @@ fn language_server_command(
 - Operator tokens `+`, `-`, `*`, `/`, and `=` are captured as `@operator`.
 - `comment` nodes are captured as `@comment`.
 - `result_comment` nodes are captured as `@hint`.
+- `section_header` names are captured as `@namespace`.
 - Exact colors are controlled by the active Zed theme.
 ## Boundary
 - `calc-core` owns calculation semantics

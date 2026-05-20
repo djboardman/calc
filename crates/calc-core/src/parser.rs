@@ -1,6 +1,6 @@
 use crate::{
-    BinaryOp, CalcError, CalcErrorKind, Expr, Span, Statement, StringInterner, Token, TokenKind,
-    UnaryOp, lex,
+    BinaryOp, CalcError, CalcErrorKind, Expr, InternalQualifiedName, Span, Statement,
+    StringInterner, Token, TokenKind, UnaryOp, lex,
 };
 
 pub fn parse(source: &str, interner: &mut StringInterner) -> Result<Statement, CalcError> {
@@ -18,6 +18,26 @@ impl Parser {
     }
 
     fn parse_statement(&mut self) -> Result<Statement, CalcError> {
+        if self.is_section_header() {
+            let token = self.advance();
+            let TokenKind::Ident(name) = token.kind else {
+                unreachable!("section header starts with an identifier");
+            };
+            self.advance();
+            self.expect_eof()?;
+            return Ok(Statement::SectionHeader {
+                name,
+                name_span: token.span,
+            });
+        }
+
+        if self.is_invalid_section_header() {
+            return Err(CalcError::new(
+                CalcErrorKind::InvalidSectionHeader,
+                self.current_span(),
+            ));
+        }
+
         if self.is_assignment() {
             let token = self.advance();
             let TokenKind::Ident(name) = token.kind else {
@@ -108,14 +128,8 @@ impl Parser {
                 Ok(Expr::Number { value, span })
             }
             TokenKind::Ident(_) => {
-                let token = self.advance();
-                let TokenKind::Ident(name) = token.kind else {
-                    unreachable!("matched identifier token");
-                };
-                Ok(Expr::Variable {
-                    name,
-                    span: token.span,
-                })
+                let (name, span) = self.parse_qualified_name()?;
+                Ok(Expr::Variable { name, span })
             }
             TokenKind::LeftParen => {
                 self.advance();
@@ -159,6 +173,59 @@ impl Parser {
                 .tokens
                 .get(self.index + 1)
                 .is_some_and(|token| matches!(token.kind, TokenKind::Equal))
+    }
+
+    fn is_section_header(&self) -> bool {
+        matches!(self.current().kind, TokenKind::Ident(_))
+            && self
+                .tokens
+                .get(self.index + 1)
+                .is_some_and(|token| matches!(token.kind, TokenKind::Colon))
+    }
+
+    fn is_invalid_section_header(&self) -> bool {
+        let mut saw_dot = false;
+
+        for token in &self.tokens[self.index..] {
+            match token.kind {
+                TokenKind::Dot => saw_dot = true,
+                TokenKind::Colon => return saw_dot,
+                TokenKind::Eof
+                | TokenKind::Equal
+                | TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Star
+                | TokenKind::Slash
+                | TokenKind::LeftParen
+                | TokenKind::RightParen
+                | TokenKind::Number(_) => return false,
+                TokenKind::Ident(_) => {}
+            }
+        }
+
+        false
+    }
+
+    fn parse_qualified_name(&mut self) -> Result<(InternalQualifiedName, Span), CalcError> {
+        let first = self.advance();
+        let TokenKind::Ident(name) = first.kind else {
+            unreachable!("qualified name starts with an identifier");
+        };
+        let mut parts = vec![name];
+        let start = first.span.start;
+        let mut end = first.span.end;
+
+        while matches!(self.current().kind, TokenKind::Dot) {
+            self.advance();
+            let token = self.advance();
+            let TokenKind::Ident(name) = token.kind else {
+                return Err(CalcError::new(CalcErrorKind::ExpectedToken, token.span));
+            };
+            end = token.span.end;
+            parts.push(name);
+        }
+
+        Ok((InternalQualifiedName::new(parts), Span::new(start, end)))
     }
 
     fn current(&self) -> &Token {

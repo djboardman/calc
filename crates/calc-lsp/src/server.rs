@@ -5,16 +5,16 @@ use tower_lsp::{
     Client, LanguageServer, LspService, Server,
     jsonrpc::Result,
     lsp_types::{
-        CodeActionOptions, CodeActionParams, CodeActionProviderCapability, CodeActionResponse,
         CompletionOptions, CompletionParams, CompletionResponse, DidChangeTextDocumentParams,
-        DidCloseTextDocumentParams, DidOpenTextDocumentParams, InitializeParams, InitializeResult,
-        ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
+        DidCloseTextDocumentParams, DidOpenTextDocumentParams, DocumentFormattingParams,
+        InitializeParams, InitializeResult, OneOf, ServerCapabilities, TextDocumentSyncCapability,
+        TextDocumentSyncKind, TextEdit,
     },
 };
 
 use crate::{
-    code_action_provider, completion_provider, configuration::Configuration, diagnostics_provider,
-    document_input_adapter, document_store::DocumentStore,
+    completion_provider, configuration::Configuration, diagnostics_provider,
+    document_input_adapter, document_store::DocumentStore, formatting_provider,
 };
 
 pub(crate) async fn run() {
@@ -50,9 +50,7 @@ impl LanguageServer for CalcLanguageServer {
                     TextDocumentSyncKind::FULL,
                 )),
                 completion_provider: Some(CompletionOptions::default()),
-                code_action_provider: Some(CodeActionProviderCapability::Options(
-                    CodeActionOptions::default(),
-                )),
+                document_formatting_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
             server_info: None,
@@ -111,8 +109,8 @@ impl LanguageServer for CalcLanguageServer {
         ))
     }
 
-    async fn code_action(&self, params: CodeActionParams) -> Result<Option<CodeActionResponse>> {
+    async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
         let documents = self.documents.lock().await;
-        Ok(code_action_provider::code_actions(&documents, &params))
+        Ok(formatting_provider::formatting(&documents, &params))
     }
 }

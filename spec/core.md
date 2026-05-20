@@ -7,7 +7,7 @@
 - Structs and enums do not derive clone except in exceptional circumstances
 - Tokens and AST nodes use `Symbol` handles into a string interner rather than storing identifier strings.
 - Token, Lexer, Expr, Statement, Parser, Environment, and Evaluate Statement are internal implementation details.
-- The editor-facing public API is `evaluate_new_document`, `evaluate_edited_document`, `DocumentEvaluation`, `LineEvaluation`, `Value`, `Symbol`, `Span`, `CalcError`, and `CalcErrorKind`.
+- The editor-facing public API is `evaluate_new_document`, `evaluate_edited_document`, `DocumentEvaluation`, `LineEvaluation`, `Value`, `Symbol`, `QualifiedName`, `Span`, `CalcError`, and `CalcErrorKind`.
 ### Incremental document evaluation design
 - A new document evaluation returns a reusable document state
 - An edited document evaluation takes previous document state and the new source text
@@ -101,9 +101,19 @@ impl DocumentEvaluation {
 pub struct LineEvaluation {
     pub line: usize,
     pub result: Result<Option<Value>, CalcError>,
-    pub defines: Option<Symbol>,
+    pub defines: Option<QualifiedName>
 }
 ```
+## Qualified Name
+- `parts` always contains the full resolved variable path
+- for top-level variables, `parts` contains one symbol.
+- for section variables, `parts` constains section path symbols followed by the variable symbol
+- public struct:
+```rust
+pub struct QualifiedName {
+    pub parts: Vec<Symbol>
+}
+ ```
 ## Calc Error
 - reports a calculation error
 ```rust
@@ -123,6 +133,8 @@ pub enum CalcErrorKind {
     UnexpectedToken,
     UndefinedVariable,
     DivisionByZero,
+    InvalidIndentation,
+    InvalidSectionHeader,
 }
 ```
 ## Expression language
@@ -148,13 +160,34 @@ pub enum CalcErrorKind {
 - Assignment stores the evaluated value for later lines
 - Blank lines are valid and evaluate to no value.
 - Spaces, tabs, and trailing whitespace are ignored.
+### Sections
+- A section header is `name:`.
+- Indentation determines section nesting.
+- Indentation is measured in leading spaces.
+- Tabs are not allowed for indentation.
+- A statement belongs to the nearest preceding section header with lower indentation.
+- A section header defines a namespace, not a value.
+- Assignments inside a section define qualified variables.
+- Unqualified references resolve first in the current section, then parent sections, then top level.
+- Qualified references use dot syntax, such as `house.stairs.total`.
+- Section headers evaluate to no value.
+- Section headers contain a single unqualified name.
+- Dotted section headers are not supported.
+- Any number of leading spaces may be used for indentation.
+- Tabs in leading indentation are invalid.
+- A section header at the same indentation as the current section starts a sibling section.
+- A section header at lower indentation dedents to the nearest parent section with lower indentation.
+- A statement at lower indentation dedents to the nearest parent section with lower indentation.
+- Section headers may have trailing comments.
+- `InvalidIndentation` is reported for tabs in leading indentation.
+- `InvalidSectionHeader` is reported for malformed section headers, including dotted section headers.
 ## Comments
 - `#` starts a comment outside expressions.
 - A comment continues to the end of the line.
 - Comments are ignored during parsing and evaluation.
 - A line containing only whitespace and a comment is a blank line.
 ## Result comments
-- A result comment is a trailing comment whose first non-whitespace text is `=>`.
+- A result comment is a trailing comment whose first non-whitespace text is `=`.
 - Result comments are ignored during parsing and evaluation like other comments.
 - Result comments do not define values and do not affect dependencies.
 ## Boundary

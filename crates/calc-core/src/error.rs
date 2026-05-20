@@ -9,6 +9,8 @@ pub enum CalcErrorKind {
     UnexpectedToken,
     UndefinedVariable,
     DivisionByZero,
+    InvalidIndentation,
+    InvalidSectionHeader,
 }
 
 #[derive(Debug, Eq, PartialEq)]
