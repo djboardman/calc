@@ -11,6 +11,8 @@ pub enum CalcErrorKind {
     DivisionByZero,
     InvalidIndentation,
     InvalidSectionHeader,
+    UnsupportedTypeOperation,
+    MixedListTypes,
 }
 
 #[derive(Debug, Eq, PartialEq)]

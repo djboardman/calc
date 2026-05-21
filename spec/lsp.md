@@ -86,6 +86,13 @@
 - The language server advertises document formatting support.
 - Formatting a Calc document writes evaluated results into the document as result comments.
 - Result comments use the format `# = value`.
+- Result comments render typed values in stable textual form.
+- Numbers render as their numeric text.
+- Currency values render as their ISO 4217 code.
+- Money values render as `CODE0.00`, for example `USD12.00`.
+- Text values render inside double quotes.
+- Boolean values render as `true` or `false`.
+- Lists render as `[item, item]` without a trailing comma.
 - Assignment lines whose value is a numeric literal do not receive result comments.
 - Writing result comments replaces an existing trailing result comment on the same line, including literals with a unary operator.
 - Writing result comments does not replace ordinary trailing comments.

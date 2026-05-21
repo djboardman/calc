@@ -8,11 +8,21 @@ pub(crate) fn expected_result_comment(line_text: &str, line: &LineEvaluation) ->
     }
 
     let value = line.result.as_ref().ok().and_then(Option::as_ref)?;
-    Some(format!("{RESULT_MARKER} {}", value.number))
+    Some(format!("{RESULT_MARKER} {}", value.display_text()))
 }
 
 pub(crate) fn split_comment(line_text: &str) -> Option<(&str, &str)> {
-    line_text.split_once('#')
+    let mut in_text = false;
+
+    for (index, ch) in line_text.char_indices() {
+        match ch {
+            '"' => in_text = !in_text,
+            '#' if !in_text => return Some((&line_text[..index], &line_text[index + 1..])),
+            _ => {}
+        }
+    }
+
+    None
 }
 
 pub(crate) fn result_comment_span(line_text: &str) -> Option<(usize, usize, &str)> {

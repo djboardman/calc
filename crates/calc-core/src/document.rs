@@ -95,7 +95,7 @@ fn evaluate_line(
         Ok(statement) => {
             let defines = statement_definition(&statement, &scope);
             let depends_on = statement_dependencies(&statement, env, &scope);
-            let result = evaluate_statement(&statement, env, &scope).map(Some);
+            let result = evaluate_statement(&statement, env, &scope, interner).map(Some);
 
             line_entry(line, source, result, defines, depends_on)
         }
@@ -124,7 +124,17 @@ fn line_entry(
 }
 
 fn source_before_comment(source: &str) -> &str {
-    source.split_once('#').map_or(source, |(before, _)| before)
+    let mut in_text = false;
+
+    for (index, ch) in source.char_indices() {
+        match ch {
+            '"' => in_text = !in_text,
+            '#' if !in_text => return &source[..index],
+            _ => {}
+        }
+    }
+
+    source
 }
 
 fn leading_indent(source: &str) -> Result<usize, CalcError> {

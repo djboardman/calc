@@ -8,15 +8,15 @@ fn new_document_evaluation_returns_per_line_results() {
     assert_eq!(document.lines[0].line, 0);
     assert_eq!(
         document.lines[0].result.as_ref().expect("line 0 succeeds"),
-        &Some(Value { number: 10.0 })
+        &Some(Value::Number(10.0))
     );
     assert_eq!(
         document.lines[1].result.as_ref().expect("line 1 succeeds"),
-        &Some(Value { number: 2.0 })
+        &Some(Value::Number(2.0))
     );
     assert_eq!(
         document.lines[2].result.as_ref().expect("line 2 succeeds"),
-        &Some(Value { number: 12.0 })
+        &Some(Value::Number(12.0))
     );
 }
 
@@ -26,15 +26,15 @@ fn document_evaluation_supports_precedence_parentheses_and_unary_minus() {
 
     assert_eq!(
         document.lines[0].result.as_ref().expect("line 0 succeeds"),
-        &Some(Value { number: 7.0 })
+        &Some(Value::Number(7.0))
     );
     assert_eq!(
         document.lines[1].result.as_ref().expect("line 1 succeeds"),
-        &Some(Value { number: 9.0 })
+        &Some(Value::Number(9.0))
     );
     assert_eq!(
         document.lines[2].result.as_ref().expect("line 2 succeeds"),
-        &Some(Value { number: -3.0 })
+        &Some(Value::Number(-3.0))
     );
 }
 
@@ -66,15 +66,15 @@ fn edited_document_reevaluates_dependent_later_lines() {
 
     assert_eq!(
         edited.lines[0].result.as_ref().expect("line 0 succeeds"),
-        &Some(Value { number: 20.0 })
+        &Some(Value::Number(20.0))
     );
     assert_eq!(
         edited.lines[1].result.as_ref().expect("line 1 succeeds"),
-        &Some(Value { number: 4.0 })
+        &Some(Value::Number(4.0))
     );
     assert_eq!(
         edited.lines[2].result.as_ref().expect("line 2 succeeds"),
-        &Some(Value { number: 24.0 })
+        &Some(Value::Number(24.0))
     );
 }
 
@@ -86,7 +86,7 @@ fn edited_document_handles_inserted_lines() {
     assert_eq!(edited.lines[2].line, 2);
     assert_eq!(
         edited.lines[2].result.as_ref().expect("line 2 succeeds"),
-        &Some(Value { number: 12.0 })
+        &Some(Value::Number(12.0))
     );
 }
 
@@ -118,15 +118,15 @@ fn comments_are_ignored_during_evaluation() {
     assert_eq!(document.lines[0].result, Ok(None));
     assert_eq!(
         document.lines[1].result.as_ref().expect("line 1 succeeds"),
-        &Some(Value { number: 1.0 })
+        &Some(Value::Number(1.0))
     );
     assert_eq!(
         document.lines[2].result.as_ref().expect("line 2 succeeds"),
-        &Some(Value { number: 2.0 })
+        &Some(Value::Number(2.0))
     );
     assert_eq!(
         document.lines[3].result.as_ref().expect("line 3 succeeds"),
-        &Some(Value { number: 5.0 })
+        &Some(Value::Number(5.0))
     );
 }
 
@@ -140,15 +140,15 @@ fn sections_define_and_resolve_qualified_variables() {
     assert_eq!(document.lines[1].result, Ok(None));
     assert_eq!(
         document.lines[2].result.as_ref().expect("line 2 succeeds"),
-        &Some(Value { number: 10.0 })
+        &Some(Value::Number(10.0))
     );
     assert_eq!(
         document.lines[3].result.as_ref().expect("line 3 succeeds"),
-        &Some(Value { number: 5.0 })
+        &Some(Value::Number(5.0))
     );
     assert_eq!(
         document.lines[6].result.as_ref().expect("line 6 succeeds"),
-        &Some(Value { number: 5.0 })
+        &Some(Value::Number(5.0))
     );
 
     let name = document.lines[3]
@@ -183,4 +183,209 @@ fn dotted_section_headers_are_invalid() {
         .expect_err("dotted section header is invalid");
 
     assert_eq!(error.kind, CalcErrorKind::InvalidSectionHeader);
+}
+
+#[test]
+fn core_infers_money_values_from_currency_symbol_literals() {
+    let document = evaluate_new_document("price = £100");
+
+    assert_eq!(
+        document.lines[0].result.as_ref().expect("line succeeds"),
+        &Some(Value::Money {
+            currency: "GBP".to_string(),
+            minor_units: 10000
+        })
+    );
+}
+
+#[test]
+fn core_infers_currency_values_from_iso_and_symbol_literals() {
+    let document = evaluate_new_document("currency = USD\nsymbol = €");
+
+    assert_eq!(
+        document.lines[0].result.as_ref().expect("line succeeds"),
+        &Some(Value::Currency("USD".to_string()))
+    );
+    assert_eq!(
+        document.lines[1].result.as_ref().expect("line succeeds"),
+        &Some(Value::Currency("EUR".to_string()))
+    );
+}
+
+#[test]
+fn core_infers_money_values_from_iso_currency_literals() {
+    let document = evaluate_new_document("price = USD99.99");
+
+    assert_eq!(
+        document.lines[0].result.as_ref().expect("line succeeds"),
+        &Some(Value::Money {
+            currency: "USD".to_string(),
+            minor_units: 9999
+        })
+    );
+}
+
+#[test]
+fn core_stores_money_values_with_two_decimal_places() {
+    let document = evaluate_new_document("price = USD99.999");
+
+    assert_eq!(
+        document.lines[0].result.as_ref().expect("line succeeds"),
+        &Some(Value::Money {
+            currency: "USD".to_string(),
+            minor_units: 10000
+        })
+    );
+}
+
+#[test]
+fn core_infers_text_values_from_double_quoted_literals() {
+    let document = evaluate_new_document("message = \"Hello, world!\"");
+
+    assert_eq!(
+        document.lines[0].result.as_ref().expect("line succeeds"),
+        &Some(Value::Text("Hello, world!".to_string()))
+    );
+}
+
+#[test]
+fn core_infers_boolean_values_from_true_and_false_literals() {
+    let document = evaluate_new_document("yes = true\nno = false");
+
+    assert_eq!(
+        document.lines[0].result.as_ref().expect("line succeeds"),
+        &Some(Value::Boolean(true))
+    );
+    assert_eq!(
+        document.lines[1].result.as_ref().expect("line succeeds"),
+        &Some(Value::Boolean(false))
+    );
+}
+
+#[test]
+fn core_infers_list_values_from_homogeneous_list_literals() {
+    let document = evaluate_new_document("values = [1, 2, 3]");
+
+    assert_eq!(
+        document.lines[0].result.as_ref().expect("line succeeds"),
+        &Some(Value::List(vec![
+            Value::Number(1.0),
+            Value::Number(2.0),
+            Value::Number(3.0),
+        ]))
+    );
+}
+
+#[test]
+fn core_accepts_list_literals_with_a_trailing_comma() {
+    let document = evaluate_new_document("values = [1, 2, 3,]");
+
+    assert_eq!(
+        document.lines[0].result.as_ref().expect("line succeeds"),
+        &Some(Value::List(vec![
+            Value::Number(1.0),
+            Value::Number(2.0),
+            Value::Number(3.0),
+        ]))
+    );
+}
+
+#[test]
+fn core_rejects_mixed_type_list_literals() {
+    let document = evaluate_new_document("values = [1, true]");
+    let error = document.lines[0]
+        .result
+        .as_ref()
+        .expect_err("mixed list is invalid");
+
+    assert_eq!(error.kind, CalcErrorKind::MixedListTypes);
+}
+
+#[test]
+fn core_evaluates_same_currency_money_addition_and_subtraction() {
+    let document = evaluate_new_document("total = USD10 + USD2.50\nremaining = total - USD1");
+
+    assert_eq!(
+        document.lines[0].result.as_ref().expect("line succeeds"),
+        &Some(Value::Money {
+            currency: "USD".to_string(),
+            minor_units: 1250
+        })
+    );
+    assert_eq!(
+        document.lines[1].result.as_ref().expect("line succeeds"),
+        &Some(Value::Money {
+            currency: "USD".to_string(),
+            minor_units: 1150
+        })
+    );
+}
+
+#[test]
+fn core_rejects_mixed_currency_money_addition_and_subtraction() {
+    let document = evaluate_new_document("total = USD10 + GBP10");
+    let error = document.lines[0]
+        .result
+        .as_ref()
+        .expect_err("mixed currency arithmetic is invalid");
+
+    assert_eq!(error.kind, CalcErrorKind::UnsupportedTypeOperation);
+}
+
+#[test]
+fn core_evaluates_text_concatenation_with_plus() {
+    let document = evaluate_new_document("message = \"Hello, \" + \"world!\"");
+
+    assert_eq!(
+        document.lines[0].result.as_ref().expect("line succeeds"),
+        &Some(Value::Text("Hello, world!".to_string()))
+    );
+}
+
+#[test]
+fn core_evaluates_money_multiplied_and_divided_by_number() {
+    let document = evaluate_new_document("double = USD10 * 2\nhalf = USD10 / 2");
+
+    assert_eq!(
+        document.lines[0].result.as_ref().expect("line succeeds"),
+        &Some(Value::Money {
+            currency: "USD".to_string(),
+            minor_units: 2000
+        })
+    );
+    assert_eq!(
+        document.lines[1].result.as_ref().expect("line succeeds"),
+        &Some(Value::Money {
+            currency: "USD".to_string(),
+            minor_units: 500
+        })
+    );
+}
+
+#[test]
+fn core_rejects_unsupported_operator_type_combinations() {
+    let document = evaluate_new_document("bad = true + false");
+    let error = document.lines[0]
+        .result
+        .as_ref()
+        .expect_err("boolean addition is invalid");
+
+    assert_eq!(error.kind, CalcErrorKind::UnsupportedTypeOperation);
+}
+
+#[test]
+fn core_evaluates_unary_minus_for_number_and_money() {
+    let document = evaluate_new_document("-1\n-USD10");
+
+    assert_eq!(
+        document.lines[0].result.as_ref().expect("line succeeds"),
+        &Some(Value::Number(-1.0))
+    );
+    assert_eq!(
+        document.lines[1].result.as_ref().expect("line succeeds"),
+        &Some(Value::Money {
+            currency: "USD".to_string(),
+            minor_units: -1000
+        })
+    );
 }

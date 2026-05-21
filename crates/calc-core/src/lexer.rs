@@ -25,10 +25,14 @@ impl Lexer<'_, '_> {
                     self.advance_char();
                 }
                 '#' => break,
+                '"' => tokens.push(self.text()?),
+                '£' => tokens.push(self.symbol_currency("GBP")?),
+                '$' => tokens.push(self.symbol_currency("USD")?),
+                '€' => tokens.push(self.symbol_currency("EUR")?),
                 '0'..='9' => tokens.push(self.number()?),
                 '.' if self.next_char_is_digit() => tokens.push(self.number()?),
                 '.' => tokens.push(self.single(TokenKind::Dot)),
-                'a'..='z' | 'A'..='Z' | '_' => tokens.push(self.ident()),
+                'a'..='z' | 'A'..='Z' | '_' => tokens.push(self.ident_or_keyword()?),
                 '+' => tokens.push(self.single(TokenKind::Plus)),
                 '-' => tokens.push(self.single(TokenKind::Minus)),
                 '*' => tokens.push(self.single(TokenKind::Star)),
@@ -37,6 +41,9 @@ impl Lexer<'_, '_> {
                 ':' => tokens.push(self.single(TokenKind::Colon)),
                 '(' => tokens.push(self.single(TokenKind::LeftParen)),
                 ')' => tokens.push(self.single(TokenKind::RightParen)),
+                '[' => tokens.push(self.single(TokenKind::LeftBracket)),
+                ']' => tokens.push(self.single(TokenKind::RightBracket)),
+                ',' => tokens.push(self.single(TokenKind::Comma)),
                 _ => {
                     let end = start + ch.len_utf8();
                     return Err(CalcError::new(
@@ -79,12 +86,16 @@ impl Lexer<'_, '_> {
         }
     }
 
-    fn ident(&mut self) -> Token {
+    fn ident_or_keyword(&mut self) -> Result<Token, CalcError> {
         let start = self.index;
 
         while let Some((_, ch)) = self.current_char() {
             match ch {
                 'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => {
+                    let prefix = &self.source[start..self.index];
+                    if prefix.len() == 3 && is_iso_4217_currency(prefix) && ch.is_ascii_digit() {
+                        break;
+                    }
                     self.advance_char();
                 }
                 _ => break,
@@ -92,10 +103,92 @@ impl Lexer<'_, '_> {
         }
 
         let span = Span::new(start, self.index);
-        Token::new(
-            TokenKind::Ident(self.interner.intern(span.source(self.source))),
+        let text = span.source(self.source);
+
+        if text == "true" {
+            return Ok(Token::new(TokenKind::Boolean(true), span));
+        }
+        if text == "false" {
+            return Ok(Token::new(TokenKind::Boolean(false), span));
+        }
+        if let Some(currency) = money_currency_prefix(text)
+            && self.current_starts_number()
+        {
+            let amount = self.money_amount()?;
+            return Ok(Token::new(
+                TokenKind::Money {
+                    currency: self.interner.intern(currency),
+                    minor_units: amount.minor_units,
+                },
+                Span::new(start, amount.end),
+            ));
+        }
+        if text.len() == 3 && is_iso_4217_currency(text) {
+            return Ok(Token::new(
+                TokenKind::Currency(self.interner.intern(text)),
+                span,
+            ));
+        }
+
+        Ok(Token::new(
+            TokenKind::Ident(self.interner.intern(text)),
             span,
-        )
+        ))
+    }
+
+    fn symbol_currency(&mut self, currency: &str) -> Result<Token, CalcError> {
+        let start = self.index;
+        self.advance_char();
+
+        if self.current_starts_number() {
+            let amount = self.money_amount()?;
+            return Ok(Token::new(
+                TokenKind::Money {
+                    currency: self.interner.intern(currency),
+                    minor_units: amount.minor_units,
+                },
+                Span::new(start, amount.end),
+            ));
+        }
+
+        Ok(Token::new(
+            TokenKind::Currency(self.interner.intern(currency)),
+            Span::new(start, self.index),
+        ))
+    }
+
+    fn text(&mut self) -> Result<Token, CalcError> {
+        let start = self.index;
+        self.advance_char();
+        let content_start = self.index;
+
+        while let Some((_, ch)) = self.current_char() {
+            if ch == '"' {
+                let content = &self.source[content_start..self.index];
+                self.advance_char();
+                return Ok(Token::new(
+                    TokenKind::Text(self.interner.intern(content)),
+                    Span::new(start, self.index),
+                ));
+            }
+            self.advance_char();
+        }
+
+        Err(CalcError::new(
+            CalcErrorKind::UnexpectedCharacter,
+            Span::new(start, self.index),
+        ))
+    }
+
+    fn money_amount(&mut self) -> Result<MoneyAmount, CalcError> {
+        let number = self.number()?;
+        let text = number.span.source(self.source);
+
+        Ok(MoneyAmount {
+            minor_units: parse_money_minor_units(text)
+                .ok_or_else(|| CalcError::new(CalcErrorKind::InvalidNumber, number.span))?,
+            end: self.index,
+        })
     }
 
     fn single(&mut self, kind: TokenKind) -> Token {
@@ -125,4 +218,48 @@ impl Lexer<'_, '_> {
         chars.next();
         matches!(chars.next(), Some('0'..='9'))
     }
+
+    fn current_starts_number(&self) -> bool {
+        matches!(self.current_char(), Some((_, '0'..='9')))
+            || matches!(self.current_char(), Some((_, '.'))) && self.next_char_is_digit()
+    }
 }
+
+struct MoneyAmount {
+    minor_units: i64,
+    end: usize,
+}
+
+fn money_currency_prefix(text: &str) -> Option<&str> {
+    if text.len() == 3 && is_iso_4217_currency(text) {
+        Some(text)
+    } else {
+        None
+    }
+}
+
+fn parse_money_minor_units(text: &str) -> Option<i64> {
+    let value = text.parse::<f64>().ok()?;
+    Some((value * 100.0).round() as i64)
+}
+
+fn is_iso_4217_currency(text: &str) -> bool {
+    ISO_4217_CODES.binary_search(&text).is_ok()
+}
+
+const ISO_4217_CODES: &[&str] = &[
+    "AED", "AFN", "ALL", "AMD", "ANG", "AOA", "ARS", "AUD", "AWG", "AZN", "BAM", "BBD", "BDT",
+    "BGN", "BHD", "BIF", "BMD", "BND", "BOB", "BOV", "BRL", "BSD", "BTN", "BWP", "BYN", "BZD",
+    "CAD", "CDF", "CHE", "CHF", "CHW", "CLF", "CLP", "CNY", "COP", "COU", "CRC", "CUP", "CVE",
+    "CZK", "DJF", "DKK", "DOP", "DZD", "EGP", "ERN", "ETB", "EUR", "FJD", "FKP", "GBP", "GEL",
+    "GHS", "GIP", "GMD", "GNF", "GTQ", "GYD", "HKD", "HNL", "HTG", "HUF", "IDR", "ILS", "INR",
+    "IQD", "IRR", "ISK", "JMD", "JOD", "JPY", "KES", "KGS", "KHR", "KMF", "KPW", "KRW", "KWD",
+    "KYD", "KZT", "LAK", "LBP", "LKR", "LRD", "LSL", "LYD", "MAD", "MDL", "MGA", "MKD", "MMK",
+    "MNT", "MOP", "MRU", "MUR", "MVR", "MWK", "MXN", "MXV", "MYR", "MZN", "NAD", "NGN", "NIO",
+    "NOK", "NPR", "NZD", "OMR", "PAB", "PEN", "PGK", "PHP", "PKR", "PLN", "PYG", "QAR", "RON",
+    "RSD", "RUB", "RWF", "SAR", "SBD", "SCR", "SDG", "SEK", "SGD", "SHP", "SLE", "SOS", "SRD",
+    "SSP", "STN", "SVC", "SYP", "SZL", "THB", "TJS", "TMT", "TND", "TOP", "TRY", "TTD", "TWD",
+    "TZS", "UAH", "UGX", "USD", "USN", "UYI", "UYU", "UYW", "UZS", "VED", "VES", "VND", "VUV",
+    "WST", "XAF", "XAG", "XAU", "XBA", "XBB", "XBC", "XBD", "XCD", "XCG", "XDR", "XOF", "XPD",
+    "XPF", "XPT", "XSU", "XTS", "XUA", "XXX", "YER", "ZAR", "ZMW", "ZWG",
+];

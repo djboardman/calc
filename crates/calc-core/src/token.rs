@@ -3,6 +3,10 @@ use crate::{Span, Symbol};
 #[derive(Debug, PartialEq)]
 pub enum TokenKind {
     Number(f64),
+    Currency(Symbol),
+    Money { currency: Symbol, minor_units: i64 },
+    Text(Symbol),
+    Boolean(bool),
     Ident(Symbol),
     Plus,
     Minus,
@@ -13,6 +17,9 @@ pub enum TokenKind {
     Dot,
     LeftParen,
     RightParen,
+    LeftBracket,
+    RightBracket,
+    Comma,
     Eof,
 }
 

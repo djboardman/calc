@@ -134,4 +134,15 @@ mod tests {
             "\nmissing"
         );
     }
+
+    #[test]
+    fn writes_result_comments_for_all_supported_value_types() {
+        let source = "money = USD10 + USD2\ntext = \"a\" + \"b\"\nboolean = true\nlist = [1, 2]";
+        let evaluation = evaluate_new_document(source);
+
+        assert_eq!(
+            source_with_result_comments(source, &evaluation.lines),
+            "money = USD10 + USD2 # = USD12.00\ntext = \"a\" + \"b\" # = \"ab\"\nboolean = true # = true\nlist = [1, 2] # = [1, 2]"
+        );
+    }
 }

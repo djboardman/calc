@@ -107,4 +107,20 @@ mod tests {
 
         assert!(diagnostics(&documents, &uri).is_empty());
     }
+
+    #[test]
+    fn warns_for_stale_non_number_result_comments() {
+        let uri = Url::parse("file:///test.calc").expect("valid uri");
+        let mut documents = DocumentStore::default();
+        document_input_adapter::open_document(
+            &mut documents,
+            uri.clone(),
+            "total = USD10 + USD2 # = USD9.00".to_string(),
+        );
+
+        let diagnostics = diagnostics(&documents, &uri);
+
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].message, "Stale result comment");
+    }
 }

@@ -127,6 +127,34 @@ impl Parser {
                 let span = self.advance().span;
                 Ok(Expr::Number { value, span })
             }
+            TokenKind::Currency(currency) => {
+                let currency = *currency;
+                let span = self.advance().span;
+                Ok(Expr::Currency { currency, span })
+            }
+            TokenKind::Money {
+                currency,
+                minor_units,
+            } => {
+                let currency = *currency;
+                let minor_units = *minor_units;
+                let span = self.advance().span;
+                Ok(Expr::Money {
+                    currency,
+                    minor_units,
+                    span,
+                })
+            }
+            TokenKind::Text(text) => {
+                let text = *text;
+                let span = self.advance().span;
+                Ok(Expr::Text { text, span })
+            }
+            TokenKind::Boolean(value) => {
+                let value = *value;
+                let span = self.advance().span;
+                Ok(Expr::Boolean { value, span })
+            }
             TokenKind::Ident(_) => {
                 let (name, span) = self.parse_qualified_name()?;
                 Ok(Expr::Variable { name, span })
@@ -137,6 +165,7 @@ impl Parser {
                 self.expect_right_paren()?;
                 Ok(expr)
             }
+            TokenKind::LeftBracket => self.parse_list(),
             _ => {
                 let span = self.current_span();
                 Err(CalcError::new(CalcErrorKind::ExpectedExpression, span))
@@ -144,10 +173,51 @@ impl Parser {
         }
     }
 
+    fn parse_list(&mut self) -> Result<Expr, CalcError> {
+        let start = self.advance().span.start;
+        let mut values = Vec::new();
+
+        if matches!(self.current().kind, TokenKind::RightBracket) {
+            return Err(CalcError::new(
+                CalcErrorKind::ExpectedExpression,
+                self.current_span(),
+            ));
+        }
+
+        loop {
+            values.push(self.parse_expression()?);
+
+            if !matches!(self.current().kind, TokenKind::Comma) {
+                break;
+            }
+            self.advance();
+            if matches!(self.current().kind, TokenKind::RightBracket) {
+                break;
+            }
+        }
+
+        let end = self.expect_right_bracket()?;
+        Ok(Expr::List {
+            values,
+            span: Span::new(start, end),
+        })
+    }
+
     fn expect_right_paren(&mut self) -> Result<(), CalcError> {
         if matches!(self.current().kind, TokenKind::RightParen) {
             self.advance();
             Ok(())
+        } else {
+            Err(CalcError::new(
+                CalcErrorKind::ExpectedToken,
+                self.current_span(),
+            ))
+        }
+    }
+
+    fn expect_right_bracket(&mut self) -> Result<usize, CalcError> {
+        if matches!(self.current().kind, TokenKind::RightBracket) {
+            Ok(self.advance().span.end)
         } else {
             Err(CalcError::new(
                 CalcErrorKind::ExpectedToken,
@@ -198,7 +268,14 @@ impl Parser {
                 | TokenKind::Slash
                 | TokenKind::LeftParen
                 | TokenKind::RightParen
-                | TokenKind::Number(_) => return false,
+                | TokenKind::LeftBracket
+                | TokenKind::RightBracket
+                | TokenKind::Comma
+                | TokenKind::Number(_)
+                | TokenKind::Currency(_)
+                | TokenKind::Money { .. }
+                | TokenKind::Text(_)
+                | TokenKind::Boolean(_) => return false,
                 TokenKind::Ident(_) => {}
             }
         }

@@ -19,6 +19,27 @@ pub enum Expr {
         value: f64,
         span: Span,
     },
+    Currency {
+        currency: Symbol,
+        span: Span,
+    },
+    Money {
+        currency: Symbol,
+        minor_units: i64,
+        span: Span,
+    },
+    Text {
+        text: Symbol,
+        span: Span,
+    },
+    Boolean {
+        value: bool,
+        span: Span,
+    },
+    List {
+        values: Vec<Expr>,
+        span: Span,
+    },
     Variable {
         name: InternalQualifiedName,
         span: Span,

@@ -27,11 +27,21 @@
 - Assignment statement: `name = expression`
 ### Expressions
 - Supports decimal numbers: `1`, `1.5`, `.5`, `5.`
+- Supports currency literals.
+- Supports money literals.
+- Supports text literals.
+- Supports boolean literals.
+- Supports list literals with an optional trailing comma.
 - Supports variables.
 - Supports parentheses.
 - Supports unary minus.
 - Supports binary operators `+`, `-`, `*`, `/`.
 - Operator precedence matches `core.md`.
+- Currency literal node name is `currency`.
+- Money literal node name is `money`.
+- Text literal node name is `text`.
+- Boolean literal node name is `boolean`.
+- List literal node name is `list`.
 ### Variables
 - Variable names start with a letter or `_`.
 - Variable names may contain letters, digits, and `_`.

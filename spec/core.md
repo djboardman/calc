@@ -56,13 +56,25 @@ pub struct Span {
 ## Evaluate Statement (internal)
 - Evaluates a parsed statement
 ## Value
-- Represents a value
-- public struct:
+- Represents a typed value
+- public enum:
 ```rust
-pub struct Value {
-    pub number: f64,
+pub enum Value {
+    Number(f64),
+    Currency(String),
+    Money { currency: String, minor_units: i64 },
+    Text(String),
+    Boolean(bool),
+    List(Vec<Value>),
+}
+
+impl Value {
+    pub fn display_text(&self) -> String;
 }
 ```
+- `Money.minor_units` stores the value rounded to 2 decimal places.
+- Currency strings use ISO 4217 currency codes.
+- `Value` may derive `Clone` because variable lookup returns stored non-copy values.
 ## Evaluate New Document
 - evaluates a document for the first time
 - public API:
@@ -135,15 +147,43 @@ pub enum CalcErrorKind {
     DivisionByZero,
     InvalidIndentation,
     InvalidSectionHeader,
+    UnsupportedTypeOperation,
+    MixedListTypes,
 }
 ```
 ## Expression language
 ### Numbers
 - Supports decimal numbers: `1`, `1.5`, `.5`, `5.`
 - Does not support scientific notation initially
+### Currency
+- Supports currency values from the ISO 4217 list, such as `GBP`, `USD`, and `EUR`.
+- Supports currency symbols `£`, `$`, and `€` as aliases for `GBP`, `USD`, and `EUR`.
+- Bare ISO 4217 codes and supported currency symbols are currency literals.
+### Money
+- Supports money literals made from a currency immediately followed by a number.
+- Examples: `£100`, `USD99.99`.
+- Money values are stored rounded to 2 decimal places.
+### Text
+- Supports text literals between double quotes.
+- Text literals do not support escape syntax.
+### Boolean
+- Supports boolean literals `true` and `false`.
+### Lists
+- Supports non-empty list literals between `[` and `]`.
+- List items are separated by commas.
+- The final item may optionally be followed by a comma.
+- Lists must contain values of the same inferred type.
 ### Operators
 - Supports `+`, `-`, `*`, `/`
 - Supports unary minus
+- `Number +/- Number -> Number`
+- `Money<Currency> +/- Money<Currency> -> Money<Currency>` when both money values have the same currency.
+- `Text + Text -> Text`
+- `Number *// Number -> Number`
+- `Money<Currency> *// Number -> Money<Currency>`
+- `-Number -> Number`
+- `-Money<Currency> -> Money<Currency>`
+- Any other operator and type combination is invalid.
 - Operator precedence:
   - parentheses
   - unary minus
