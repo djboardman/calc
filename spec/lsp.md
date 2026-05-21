@@ -62,6 +62,10 @@
 - Completion items suggest variables declared before the current line.
 - Completion items do not include calculated values.
 - Completion items insert the selected variable name.
+- Completion is only returned on the right hand side of an assignment.
+- Completion is not returned inside comments.
+- Completion replaces the already typed variable path prefix.
+- Completion filters suggestions by the already typed prefix.
 ### Diagnostics
 - Publishes diagnostics for calculation errors.
 - Diagnostics use line-relative spans from `calc-core` converted to LSP ranges.
@@ -97,6 +101,7 @@
 - Completion supports qualified variable references.
 - Completion for visible variables inserts the shortest valid name from the current section.
 - Completion for qualified references inserts the full qualified name.
+- Completion for qualified references replaces the already typed qualified prefix with the completed qualified name.
 ## Boundary
 - `calc-core` owns calculation semantics.
 - `calc-lsp` owns LSP behavior.

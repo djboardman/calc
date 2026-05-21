@@ -1,3 +1,5 @@
 name = "Calc"
 grammar = "calc"
 path_suffixes = ["calc"]
+tab_size = 2
+hard_tabs = false

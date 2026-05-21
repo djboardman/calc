@@ -70,6 +70,9 @@ fn language_server_command(
 - Provides defaults when settings are absent
 - Does not affect calculation semantics owned by `calc-core`
 - Does not affect LSP semantics owned by `calc-lsp`
+### Editor defaults
+- Calc files use a default indentation width of 2 spaces.
+- Calc files use spaces for indentation, not hard tabs.
 ### Highlighting
 - `number` nodes are captured as `@number`.
 - `identifier` nodes are captured as `@variable`.

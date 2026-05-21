@@ -1,0 +1,43 @@
+# Data Types
+## Purpose
+- To introduce data types to calc
+- To introduce type inference
+- To introduce casting between types
+## Existing Functionality
+- Currently all values in calc are a single type of Value
+## New Functionality
+- Introduce a set of basic types:
+  - Number
+  - Currency
+  - Money<Currency>
+  - Text
+  - Boolean
+  - List<Type>
+- Use type inference rules to recognize a type from the assigned value or outcome of operations
+  - Number:
+    - Digits without or without a decimal point
+    - e.g. `12` or `12.24`
+  - Currency from the ISO 4217 list:
+    - Supported currency symbols are `£`, `$`, `€` which are `GBP`, `USD`, `EUR`
+  - Money
+    - A currency type followed by a number
+    - The number is stored as a decimal with 2 decimal places whether or not there is a decimal place or the number of decimal places
+    - e.g. `£100` or `USD99.99`
+  - Text
+    - Whatever is between begin and end double quotes `"`
+    - e.g. `"Hello, world!"`
+  - Boolean
+    - The literal values `true` or `false`
+  - List<Type>
+    - A comma separated list between `[` and `]` with or without a final `,` of the same type Type
+    - e.g. `[1, 2, 3]` or `[1, 2, 3,]
+- Define the type of basic operators (any other combinations are invalid)
+  - Binary operators:
+    - `Number +/- Number -> Number`
+    - `Money<Currency> +/- Money<Currency> -> Money<Currency>`
+    - `Text + Text -> Text`
+    - `Number *// Number -> Number`
+    - `Money<Currency> *// Number -> Money<Currency>`
+  - Unary operators:
+    - `-Number -> Number`
+    - `-Money<Currency> -> Money<Currency>`
