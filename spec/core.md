@@ -74,6 +74,9 @@ impl Value {
 ```
 - `Money.minor_units` stores the value rounded to 2 decimal places.
 - Currency strings use ISO 4217 currency codes.
+- `Value::display_text` renders `Money<GBP>`, `Money<USD>`, and `Money<EUR>` with `£`, `$`, and `€`.
+- `Value::display_text` renders other money values with their ISO 4217 code.
+- `Value::display_text` renders negative money values with the sign before the currency symbol or code.
 - `Value` may derive `Clone` because variable lookup returns stored non-copy values.
 ## Evaluate New Document
 - evaluates a document for the first time

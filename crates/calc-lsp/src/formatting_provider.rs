@@ -142,7 +142,19 @@ mod tests {
 
         assert_eq!(
             source_with_result_comments(source, &evaluation.lines),
-            "money = USD10 + USD2 # = USD12.00\ntext = \"a\" + \"b\" # = \"ab\"\nboolean = true # = true\nlist = [1, 2] # = [1, 2]"
+            "money = USD10 + USD2 # = $12.00\ntext = \"a\" + \"b\" # = \"ab\"\nboolean = true # = true\nlist = [1, 2] # = [1, 2]"
+        );
+    }
+
+    #[test]
+    fn writes_currency_symbols_for_gbp_usd_and_eur_money_result_comments() {
+        let source =
+            "gbp = GBP10 + GBP2\nusd = USD10 + USD2\neur = EUR10 + EUR2\nother = CAD10 + CAD2";
+        let evaluation = evaluate_new_document(source);
+
+        assert_eq!(
+            source_with_result_comments(source, &evaluation.lines),
+            "gbp = GBP10 + GBP2 # = £12.00\nusd = USD10 + USD2 # = $12.00\neur = EUR10 + EUR2 # = €12.00\nother = CAD10 + CAD2 # = CAD12.00"
         );
     }
 }

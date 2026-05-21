@@ -62,6 +62,7 @@ impl Value {
             } => {
                 let sign = if *minor_units < 0 { "-" } else { "" };
                 let absolute = minor_units.abs();
+                let currency = money_display_currency(currency);
                 format!("{sign}{currency}{}.{:02}", absolute / 100, absolute % 100)
             }
             Self::Text(text) => format!("\"{}\"", text),
@@ -87,4 +88,13 @@ pub(crate) enum ValueType {
     Boolean,
     List(Box<ValueType>),
     EmptyList,
+}
+
+fn money_display_currency(currency: &str) -> &str {
+    match currency {
+        "GBP" => "£",
+        "USD" => "$",
+        "EUR" => "€",
+        _ => currency,
+    }
 }

@@ -1,18 +1,19 @@
 # Rates
 rates:
-  hourly = 85
-hourly_rate = 85
+  hourly = £85 # = £85.00
 
 hours:
   design = 11
   build = 18
   review = 3
 
-subtotal = rates.hourly * (hours.design + hours.build + hours.review) # = 2720
-tax = subtotal * 2 # = 5440
-total = subtotal + tax # = 8160
-deposit = total * 0.5 # = 4080
-remaining = total - deposit # = 4080
+subtotal = rates.hourly * (hours.design + hours.build + hours.review) # = £2720.00
+tax = subtotal * 2 # = £5440.00
+total = subtotal + tax # = £8160.00
+deposit = total * 0.5 # = £4080.00
+remaining = total - deposit # = £4080.00
+
+
 
 # subtotal = hourly_rate * (design_hours + build_hours + review_hours)
 # tax = subtotal * 2

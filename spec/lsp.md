@@ -89,7 +89,9 @@
 - Result comments render typed values in stable textual form.
 - Numbers render as their numeric text.
 - Currency values render as their ISO 4217 code.
-- Money values render as `CODE0.00`, for example `USD12.00`.
+- Money values for `GBP`, `USD`, and `EUR` render with `£`, `$`, and `€`.
+- Money values for other currencies render with their ISO 4217 code.
+- Negative money values render the sign before the currency symbol or code, for example `-$12.00` and `-CAD12.00`.
 - Text values render inside double quotes.
 - Boolean values render as `true` or `false`.
 - Lists render as `[item, item]` without a trailing comma.

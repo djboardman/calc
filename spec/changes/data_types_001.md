@@ -24,6 +24,8 @@
     - A currency type followed by a number
     - The number is stored as a decimal with 2 decimal places whether or not there is a decimal place or the number of decimal places
     - e.g. `£100` or `USD99.99`
+    - Result comments display `Money<GBP>`, `Money<USD>`, and `Money<EUR>` values using `£`, `$`, and `€`.
+    - Result comments display other money values using their ISO 4217 currency code.
   - Text
     - Whatever is between begin and end double quotes `"`
     - e.g. `"Hello, world!"`
@@ -63,6 +65,7 @@
 - Add errors for unsupported operator/type combinations and mixed-type lists.
 - Preserve existing section, qualified name, comment, result comment, formatting, and completion behavior.
 - Update result comment formatting to render non-number values in a stable textual form.
+- Update result comment formatting to render money values as `£0.00`, `$0.00`, or `€0.00` for `GBP`, `USD`, and `EUR`.
 - Update stale result comment diagnostics to compare against the rendered value for every supported type.
 - Update `spec/tree-sitter.md` after this change is accepted to include the new literal syntax.
 - Update the external `tree-sitter-calc` grammar for the new literals and list syntax.
@@ -86,6 +89,7 @@
 - `core rejects unsupported operator type combinations`
 - `core evaluates unary minus for number and money`
 - `lsp formats result comments for all supported value types`
+- `lsp formats GBP USD and EUR money result comments with currency symbols`
 - `lsp warns for stale result comments for non-number values`
 - `tree-sitter parses money text boolean and list literals`
 ## Local Zed Dev Extension Rebuild
